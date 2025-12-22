@@ -1,7 +1,10 @@
 // packages/core/src/demo-run.ts
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { createInMemoryRegistry } from "./registry.js";
 import { createPersistx, type PersistxAdapter, type PersistxAdapterSaveRequest } from "./index.js";
-import { EXAMPLE_PRODUCT_FORM_V1 } from "./examples.js";
+import { loadDefinitions } from "./definition-loader.js";
 
 const mockAdapter: PersistxAdapter = {
     async save(req: PersistxAdapterSaveRequest) {
@@ -17,7 +20,16 @@ const mockAdapter: PersistxAdapter = {
 };
 
 async function main() {
-    const registry = createInMemoryRegistry([EXAMPLE_PRODUCT_FORM_V1]);
+    // Resolve repo root: packages/core/dist/demo-run.js -> go up 3 levels to repo root
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const repoRoot = path.resolve(__dirname, "../../../");
+
+    const defsPath = path.join(repoRoot, "definitions", "shop_product.v1.json");
+
+    const definitions = loadDefinitions({ kind: "jsonFile", path: defsPath });
+    const registry = createInMemoryRegistry(definitions);
+
     const persistx = createPersistx({ adapter: mockAdapter, registry });
 
     const res = await persistx.save({
@@ -35,6 +47,7 @@ async function main() {
     });
 
     console.log("Saved:", res);
+    console.log("Loaded definitions from:", defsPath);
 }
 
 main().catch((e) => {
