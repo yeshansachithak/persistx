@@ -1,0 +1,23 @@
+// packages/core/src/examples.ts
+import type { PersistxFormDefinition } from "./form-definition.js";
+
+export const EXAMPLE_PRODUCT_FORM_V1: PersistxFormDefinition = {
+    formKey: "shop_product",
+    version: 1,
+    collection: "products",
+    docIdStrategy: { kind: "payload", key: "sku" },
+    writeMode: "upsert",
+    allowUnknownFields: false,
+    fields: [
+        { key: "sku", type: "string", rules: [{ kind: "required" }, { kind: "regex", value: "^[A-Z0-9_-]{3,32}$" }] },
+        { key: "name", type: "string", rules: [{ kind: "required" }] },
+        { key: "price", type: "number", rules: [{ kind: "required" }, { kind: "min", value: 0 }] },
+        { key: "currency", type: "string", rules: [{ kind: "required" }, { kind: "regex", value: "^[A-Z]{3}$" }] },
+        { key: "category", type: "string", path: "meta.category" },
+        { key: "tags", type: "array", path: "meta.tags", nullable: true }
+    ],
+    meta: {
+        title: "Shop Product",
+        description: "Create/update products by SKU"
+    }
+};

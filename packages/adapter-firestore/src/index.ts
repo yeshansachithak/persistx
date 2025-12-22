@@ -1,18 +1,17 @@
-import type { PersistxAdapter, PersistxSaveRequest, PersistxSaveResult } from "@persistx/core";
+// packages/adapter-firestore/src/index.ts
+import type { PersistxAdapter, PersistxSaveResult } from "@persistx/core";
 
 export type FirestoreAdapterOptions = {
-  // We'll define this later (Firestore client, timestamp strategy, merge behavior, etc.)
+  // later: firestore client, merge behavior, timestamps, etc.
 };
 
 export function createFirestoreAdapter(_options: FirestoreAdapterOptions): PersistxAdapter {
   return {
-    async save(request: PersistxSaveRequest): Promise<PersistxSaveResult> {
-      // Placeholder – we’ll implement after core contracts are finalized.
-      // This stub allows consumers to compile while we build incrementally.
-      const id = request.doc.id ?? "AUTO_ID_NOT_IMPLEMENTED";
+    async save(request): Promise<PersistxSaveResult> {
+      const id = request.idStrategy.kind === "fixed" ? request.idStrategy.id : "AUTO_ID_NOT_IMPLEMENTED";
 
       return {
-        collection: request.doc.collection,
+        collection: request.collection,
         id,
         mode: request.mode,
         schemaVersion: request.schemaVersion,

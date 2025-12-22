@@ -14,5 +14,8 @@
     "test": "npm run -ws test",
     "lint": "npm run -ws lint",
     "clean": "npm run -ws clean"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3"
   }
 }

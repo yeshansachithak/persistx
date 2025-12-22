@@ -10,13 +10,16 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc -p tsconfig.json",
+    "demo": "node dist/demo-run.js",
     "test": "echo \"(no tests yet)\"",
     "lint": "echo \"(no lint yet)\"",
     "clean": "rm -rf dist *.tsbuildinfo"
