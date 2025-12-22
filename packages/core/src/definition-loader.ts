@@ -1,5 +1,6 @@
 // packages/core/src/definition-loader.ts
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import path from "node:path";
 import type { PersistxFormDefinition } from "./form-definition.js";
 import { DefinitionInvalidError } from "./definition-errors.js";
 
@@ -43,6 +44,44 @@ export function loadDefinitions(source: DefinitionSource): PersistxFormDefinitio
         return defs;
     }
 
-    // exhaustive
     throw new DefinitionInvalidError("Unknown definition source");
+}
+
+/**
+ * Load all *.json files under a directory, flattening any arrays of definitions.
+ * - Skips non-json files
+ * - Throws if JSON is invalid or not an array
+ * - Validates each definition
+ */
+export function loadDefinitionsFromDir(dirPath: string): PersistxFormDefinition[] {
+    const st = statSync(dirPath);
+    if (!st.isDirectory()) {
+        throw new DefinitionInvalidError("Definitions path is not a directory", { dirPath });
+    }
+
+    const files = readdirSync(dirPath)
+        .filter((f) => f.toLowerCase().endsWith(".json"))
+        .map((f) => path.join(dirPath, f));
+
+    const all: PersistxFormDefinition[] = [];
+
+    for (const filePath of files) {
+        const raw = readFileSync(filePath, "utf-8");
+        let parsed: unknown;
+        try {
+            parsed = JSON.parse(raw);
+        } catch (e: any) {
+            throw new DefinitionInvalidError("Invalid JSON in definitions file", { filePath, error: e?.message ?? String(e) });
+        }
+
+        if (!Array.isArray(parsed)) {
+            throw new DefinitionInvalidError("Definitions JSON must be an array", { filePath });
+        }
+
+        const defs = parsed as PersistxFormDefinition[];
+        for (const d of defs) basicValidateDefinition(d);
+        all.push(...defs);
+    }
+
+    return all;
 }
