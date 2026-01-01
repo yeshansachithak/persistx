@@ -2,27 +2,32 @@
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
-import type { PersistxFormDefinition } from "@persistx/core";
-import type { PersistxFieldDefinition } from "@persistx/core";
+import type { PersistxFormDefinition, PersistxFieldDefinition } from "@persistx/core";
 
 type LoadedDef = {
     filePath: string;
-    defIndexInFile: number; // index in JSON array
+    defIndexInFile: number; // index in definitions array
     def: PersistxFormDefinition;
 };
 
+type SchemaFile = {
+    raw: any;              // original parsed json (array or wrapper object)
+    definitions: any[];    // the actual array we mutate
+};
+
 export async function runDiff(opts: {
-    dir: string;
+    file: string;          // ✅ Option A: single file
     apply: boolean;
     yes: boolean;
     form?: string;
     from?: number;
     to?: number;
 }) {
-    const dirAbs = path.resolve(process.cwd(), opts.dir);
-    if (!fs.existsSync(dirAbs)) throw new Error(`Definitions dir not found: ${dirAbs}`);
+    const fileAbs = path.resolve(process.cwd(), opts.file);
+    if (!fs.existsSync(fileAbs)) throw new Error(`Schema file not found: ${fileAbs}`);
 
-    const loaded = loadDefinitionsWithSource(dirAbs);
+    const schema = readSchemaFile(fileAbs);
+    const loaded = loadDefinitionsWithSource(fileAbs, schema.definitions);
 
     // Group by formKey
     const byForm = new Map<string, LoadedDef[]>();
@@ -42,7 +47,7 @@ export async function runDiff(opts: {
         ? null
         : readline.createInterface({ input: process.stdin, output: process.stdout });
 
-    const pendingWrites = new Map<string, unknown>(); // filePath -> parsed json array mutated
+    let didWrite = false;
 
     for (const [formKey, defs] of byForm.entries()) {
         defs.sort((a, b) => a.def.version - b.def.version);
@@ -55,8 +60,8 @@ export async function runDiff(opts: {
             continue;
         }
 
-        const fromDef = defs.find(d => d.def.version === fromV);
-        const toDef = defs.find(d => d.def.version === toV);
+        const fromDef = defs.find((d) => d.def.version === fromV);
+        const toDef = defs.find((d) => d.def.version === toV);
 
         if (!fromDef || !toDef) {
             console.log(`\n[${formKey}] Skipping (version not found). from=${fromV} to=${toV}`);
@@ -71,13 +76,6 @@ export async function runDiff(opts: {
             continue;
         }
 
-        // Load target file JSON (only if we may apply)
-        let toFileJson: any[] | null = null;
-        if (opts.apply) {
-            toFileJson = (pendingWrites.get(toDef.filePath) as any[] | undefined) ?? readJsonArray(toDef.filePath);
-            pendingWrites.set(toDef.filePath, toFileJson);
-        }
-
         for (const s of suggestions) {
             const msg = `Map "${s.fromKey}" -> "${s.toKey}" ? (score=${s.score.toFixed(2)})`;
             const accept = opts.yes ? true : await askYesNo(rl!, msg, s.score >= 0.85);
@@ -86,73 +84,84 @@ export async function runDiff(opts: {
 
             console.log(`  ✅ accepted: ${s.fromKey} -> ${s.toKey}`);
 
-            if (opts.apply && toFileJson) {
-                applyAliasMapping(toFileJson, toDef.def.formKey, toDef.def.version, s.toKey, s.fromKey);
+            if (opts.apply) {
+                applyAliasMapping(schema.definitions, toDef.def.formKey, toDef.def.version, s.toKey, s.fromKey);
+                didWrite = true;
             }
         }
     }
 
     if (rl) rl.close();
 
-    if (opts.apply && pendingWrites.size > 0) {
-        for (const [filePath, json] of pendingWrites.entries()) {
-            fs.writeFileSync(filePath, JSON.stringify(json, null, 2) + "\n", "utf-8");
-            console.log(`\n✍️  wrote: ${filePath}`);
+    if (opts.apply) {
+        if (!didWrite) {
+            console.log("\nNothing to write.");
+        } else {
+            writeSchemaFile(fileAbs, schema);
+            console.log(`\n✍️  wrote: ${fileAbs}`);
         }
-    } else if (opts.apply) {
-        console.log("\nNothing to write.");
     }
 
     console.log("\nDone.");
 }
 
-function loadDefinitionsWithSource(dirAbs: string): LoadedDef[] {
-    const files = fs
-        .readdirSync(dirAbs)
-        .filter(f => f.toLowerCase().endsWith(".json"))
-        .map(f => path.join(dirAbs, f));
-
-    const out: LoadedDef[] = [];
-    for (const filePath of files) {
-        const arr = readJsonArray(filePath);
-        for (let i = 0; i < arr.length; i++) {
-            const def = arr[i] as PersistxFormDefinition;
-            // minimal check (core loader does deep validation; here we keep CLI tolerant)
-            if (!def?.formKey || !def?.version || !def?.fields) continue;
-            out.push({ filePath, defIndexInFile: i, def });
-        }
-    }
-    return out;
-}
-
-function readJsonArray(filePath: string): any[] {
-    const raw = fs.readFileSync(filePath, "utf-8");
+function readSchemaFile(filePath: string): SchemaFile {
+    const rawText = fs.readFileSync(filePath, "utf-8");
     let parsed: unknown;
+
     try {
-        parsed = JSON.parse(raw);
+        parsed = JSON.parse(rawText);
     } catch (e: any) {
         throw new Error(`Invalid JSON: ${filePath} (${e?.message ?? String(e)})`);
     }
-    if (!Array.isArray(parsed)) throw new Error(`Definitions file must be an array: ${filePath}`);
-    return parsed;
+
+    // Wrapper format: { persistx: 1, definitions: [...] }
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const obj = parsed as any;
+        if (!Array.isArray(obj.definitions)) {
+            throw new Error(`Schema must contain "definitions": [] (${filePath})`);
+        }
+        return { raw: obj, definitions: obj.definitions };
+    }
+
+    // Backward compatible: array only
+    if (Array.isArray(parsed)) {
+        return { raw: parsed, definitions: parsed };
+    }
+
+    throw new Error(`Schema must be an array or { definitions: [] }: ${filePath}`);
+}
+
+function writeSchemaFile(filePath: string, schema: SchemaFile) {
+    const outJson = Array.isArray(schema.raw)
+        ? schema.definitions
+        : { ...schema.raw, definitions: schema.definitions };
+
+    fs.writeFileSync(filePath, JSON.stringify(outJson, null, 2) + "\n", "utf-8");
+}
+
+function loadDefinitionsWithSource(filePath: string, definitions: any[]): LoadedDef[] {
+    const out: LoadedDef[] = [];
+    for (let i = 0; i < definitions.length; i++) {
+        const def = definitions[i] as PersistxFormDefinition;
+        // minimal check (core loader does deep validation; here we keep CLI tolerant)
+        if (!def?.formKey || !def?.version || !def?.fields) continue;
+        out.push({ filePath, defIndexInFile: i, def });
+    }
+    return out;
 }
 
 type RenameSuggestion = { fromKey: string; toKey: string; score: number };
 
 function suggestRenames(fromDef: PersistxFormDefinition, toDef: PersistxFormDefinition): RenameSuggestion[] {
-    const fromKeys = new Set(
-        fromDef.fields.map((f: PersistxFieldDefinition) => f.key)
-    );
-    const toKeys = new Set(
-        toDef.fields.map((f: PersistxFieldDefinition) => f.key)
-    );
+    const fromKeys = new Set(fromDef.fields.map((f: PersistxFieldDefinition) => f.key));
+    const toKeys = new Set(toDef.fields.map((f: PersistxFieldDefinition) => f.key));
 
     const removed: string[] = [...fromKeys].filter((k) => !toKeys.has(k));
     const added: string[] = [...toKeys].filter((k) => !fromKeys.has(k));
 
     if (removed.length === 0 || added.length === 0) return [];
 
-    // score every removed->added pair, keep best matches
     const pairs: RenameSuggestion[] = [];
     for (const r of removed) {
         let best: RenameSuggestion | null = null;
@@ -163,10 +172,8 @@ function suggestRenames(fromDef: PersistxFormDefinition, toDef: PersistxFormDefi
         if (best && best.score >= 0.6) pairs.push(best);
     }
 
-    // sort by highest confidence
     pairs.sort((x, y) => y.score - x.score);
 
-    // dedupe by toKey (only one mapping per toKey)
     const usedTo = new Set<string>();
     const final: RenameSuggestion[] = [];
     for (const p of pairs) {
@@ -178,7 +185,6 @@ function suggestRenames(fromDef: PersistxFormDefinition, toDef: PersistxFormDefi
     return final;
 }
 
-// Heuristic similarity: normalize + levenshtein-based score
 function similarityScore(a: string, b: string): number {
     const na = normalizeKey(a);
     const nb = normalizeKey(b);
@@ -189,9 +195,7 @@ function similarityScore(a: string, b: string): number {
     const maxLen = Math.max(na.length, nb.length) || 1;
     const ratio = 1 - d / maxLen;
 
-    // small bonus if one contains the other after normalize
-    const containsBonus =
-        na.includes(nb) || nb.includes(na) ? 0.08 : 0;
+    const containsBonus = na.includes(nb) || nb.includes(na) ? 0.08 : 0;
 
     return clamp(ratio + containsBonus, 0, 1);
 }
@@ -252,15 +256,14 @@ async function askYesNo(rl: readline.Interface, question: string, defaultYes: bo
 }
 
 function applyAliasMapping(
-    fileJsonArray: any[],
+    definitions: any[],
     formKey: string,
     version: number,
     toKey: string,
     fromKey: string
 ) {
-    // find the target definition in this file
-    const defObj = fileJsonArray.find((d: any) => d?.formKey === formKey && d?.version === version);
-    if (!defObj) throw new Error(`Cannot apply mapping: target def not found in file for ${formKey}@${version}`);
+    const defObj = definitions.find((d: any) => d?.formKey === formKey && d?.version === version);
+    if (!defObj) throw new Error(`Cannot apply mapping: target def not found for ${formKey}@${version}`);
 
     const field = (defObj.fields ?? []).find((f: any) => f?.key === toKey);
     if (!field) throw new Error(`Cannot apply mapping: field "${toKey}" not found in ${formKey}@${version}`);
