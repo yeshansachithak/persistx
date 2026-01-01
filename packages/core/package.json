@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js"
     }
   },
   "files": [
@@ -19,9 +23,6 @@
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc -p tsconfig.json",
-    "demo": "node dist/demo-run.js",
-    "test": "echo \"(no tests yet)\"",
-    "lint": "echo \"(no lint yet)\"",
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "devDependencies": {

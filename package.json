@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "demo-vite"
   ],
   "engines": {
     "node": ">=20"
