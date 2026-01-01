@@ -52,3 +52,32 @@ export type PersistxAdapterSaveRequest = {
 export type PersistxAdapter = {
     save(request: PersistxAdapterSaveRequest): Promise<PersistxSaveResult>;
 };
+
+export type PersistxEngine = {
+    save(req: PersistxSaveRequest<Record<string, unknown>>): Promise<PersistxSaveResult>;
+
+    /** Junior-friendly helpers */
+    submit(
+        formKey: string,
+        payload: Record<string, unknown>,
+        opts?: { uid?: string; mode?: PersistxMode; schemaVersion?: number }
+    ): Promise<PersistxSaveResult>;
+
+    create(
+        formKey: string,
+        payload: Record<string, unknown>,
+        opts?: { uid?: string; schemaVersion?: number }
+    ): Promise<PersistxSaveResult>;
+
+    update(
+        formKey: string,
+        payload: Record<string, unknown>,
+        opts?: { uid?: string; schemaVersion?: number }
+    ): Promise<PersistxSaveResult>;
+
+    upsert(
+        formKey: string,
+        payload: Record<string, unknown>,
+        opts?: { uid?: string; schemaVersion?: number }
+    ): Promise<PersistxSaveResult>;
+};
