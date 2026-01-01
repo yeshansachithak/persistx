@@ -1,5 +1,5 @@
 // packages/core/src/mapper.ts
-import type { PersistxFormDefinition } from "./form-definition.js";
+import type { PersistxFormDefinition, PersistxFieldDefinition } from "./form-definition.js";
 
 function setDotPath(target: Record<string, unknown>, path: string, value: unknown) {
     const parts = path.split(".");
@@ -24,10 +24,31 @@ function setDotPath(target: Record<string, unknown>, path: string, value: unknow
     }
 }
 
+function resolveFieldValue(field: PersistxFieldDefinition, payload: Record<string, unknown>) {
+    // primary key wins
+    const direct = payload[field.key];
+    if (direct !== undefined) return direct;
+
+    // aliases are fallback (first one found)
+    const aliases = field.aliases ?? [];
+    for (const a of aliases) {
+        const v = payload[a];
+        if (v !== undefined) return v;
+    }
+    return undefined;
+}
+
 export function mapPayload(def: PersistxFormDefinition, payload: Record<string, unknown>) {
     const out: Record<string, unknown> = {};
-    const allowedKeys = new Set(def.fields.map(f => f.key));
 
+    // Allowed keys are field.key + field.aliases
+    const allowedKeys = new Set<string>();
+    for (const f of def.fields) {
+        allowedKeys.add(f.key);
+        for (const a of f.aliases ?? []) allowedKeys.add(a);
+    }
+
+    // strict unknown keys
     if (def.allowUnknownFields === false) {
         for (const k of Object.keys(payload)) {
             if (!allowedKeys.has(k)) {
@@ -39,7 +60,7 @@ export function mapPayload(def: PersistxFormDefinition, payload: Record<string, 
     for (const field of def.fields) {
         if (field.ignore) continue;
 
-        const value = payload[field.key];
+        const value = resolveFieldValue(field, payload);
         if (value === undefined) continue;
 
         const path = field.path ?? field.key;

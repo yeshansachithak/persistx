@@ -13,6 +13,12 @@ export type PersistxFieldDefinition = {
     /** Incoming payload key (UI field name) */
     key: string;
 
+    /**
+     * Additional incoming payload keys that should be treated as the same field.
+     * Used for safe renames across versions (ex: myPetName -> my_pet_name).
+     */
+    aliases?: string[];
+
     /** Expected data type */
     type: PersistxPrimitive;
 
@@ -51,7 +57,7 @@ export type PersistxFormDefinition = {
     writeMode: PersistxWriteMode;
     fields: PersistxFieldDefinition[];
 
-    /** If false, reject payload keys not declared in `fields` */
+    /** If false, reject payload keys not declared in `fields` (including aliases) */
     allowUnknownFields?: boolean;
 
     hooks?: PersistxHookRef[];

@@ -26,8 +26,18 @@ export type PersistxMode = "create" | "update" | "upsert";
 
 export type PersistxSaveRequest<TPayload = unknown> = {
   formKey: string;
-  schemaVersion: number;
-  mode: PersistxMode;
+
+  /**
+   * Optional now.
+   * - If omitted, PersistX will use registry.getLatest(formKey)
+   */
+  schemaVersion?: number;
+
+  /**
+   * Optional now.
+   * - If omitted, PersistX will use def.writeMode
+   */
+  mode?: PersistxMode;
 
   /** optional override (definition is authoritative, this is for advanced usage/testing) */
   doc?: {
@@ -53,6 +63,7 @@ export type PersistxSaveResult = {
 
 /** ✅ Explicit adapter request type */
 export type PersistxAdapterSaveRequest = {
+  formKey?: string; // ✅ NEW (for audit)
   collection: string;
   idStrategy: { kind: "auto" } | { kind: "fixed"; id: string };
   mode: PersistxMode;
@@ -66,6 +77,12 @@ export type PersistxAdapter = {
 
 export type PersistxEngine = {
   save(req: PersistxSaveRequest<Record<string, unknown>>): Promise<PersistxSaveResult>;
+
+  /** Junior-friendly helpers */
+  submit(formKey: string, payload: Record<string, unknown>, opts?: { uid?: string; mode?: PersistxMode; schemaVersion?: number }): Promise<PersistxSaveResult>;
+  create(formKey: string, payload: Record<string, unknown>, opts?: { uid?: string; schemaVersion?: number }): Promise<PersistxSaveResult>;
+  update(formKey: string, payload: Record<string, unknown>, opts?: { uid?: string; schemaVersion?: number }): Promise<PersistxSaveResult>;
+  upsert(formKey: string, payload: Record<string, unknown>, opts?: { uid?: string; schemaVersion?: number }): Promise<PersistxSaveResult>;
 };
 
 export function createPersistx(opts: {
@@ -78,18 +95,32 @@ export function createPersistx(opts: {
     dropUndefined?: boolean;
   };
 }): PersistxEngine {
-  return {
+  // define engine first so hooks can call engine.save safely
+  const engine: PersistxEngine = {
     async save(req) {
-      const def = opts.registry.get(req.formKey, req.schemaVersion);
-      if (!def) throw new DefinitionNotFoundError(req.formKey, req.schemaVersion);
+      const resolvedVersion = req.schemaVersion ?? opts.registry.getLatestVersion(req.formKey);
+      if (!resolvedVersion) throw new DefinitionNotFoundError(req.formKey, req.schemaVersion ?? -1);
+
+      const def = opts.registry.get(req.formKey, resolvedVersion);
+      if (!def) throw new DefinitionNotFoundError(req.formKey, resolvedVersion);
 
       const nowISO = req.context?.nowISO ?? new Date().toISOString();
+
+      // hook context: add save() for multi-collection orchestration via hooks
       const hookContext: PersistxHookContext = {
         formKey: req.formKey,
-        schemaVersion: req.schemaVersion,
-        mode: req.mode,
+        schemaVersion: resolvedVersion,
+        mode: (req.mode ?? def.writeMode) as PersistxMode,
         uid: req.context?.uid,
-        nowISO
+        nowISO,
+
+        // ✅ allows hooks to persist additional docs via PersistX pipeline
+        save: async (childReq) => {
+          // childReq is intentionally lightweight to avoid strong coupling in hooks typings
+          // but it still goes through the same PersistX engine pipeline.
+          const r = childReq as PersistxSaveRequest<Record<string, unknown>>;
+          return engine.save(r);
+        }
       };
 
       const payload = (req.payload ?? {}) as Record<string, unknown>;
@@ -103,13 +134,13 @@ export function createPersistx(opts: {
         catch (e: any) { throw new HookFailedError(h.name, e?.message ?? String(e)); }
       }
 
-      // validate
+      // validate (PersistX safety net)
       const validation = validatePayload(def, payload);
       if (!validation.ok) {
         throw new ValidationFailedError("Validation failed", {
           errors: validation.errors,
           formKey: req.formKey,
-          version: req.schemaVersion
+          version: resolvedVersion
         });
       }
 
@@ -122,7 +153,7 @@ export function createPersistx(opts: {
         catch (e: any) { throw new HookFailedError(h.name, e?.message ?? String(e)); }
       }
 
-      // normalize
+      // hooks: beforeNormalize
       for (const h of def.hooks ?? []) {
         if (h.key !== "beforeNormalize") continue;
         const fn = opts.hooks?.get(h.name);
@@ -133,6 +164,7 @@ export function createPersistx(opts: {
 
       const normalized = normalizePayload(payload, opts.normalize);
 
+      // hooks: afterNormalize
       for (const h of def.hooks ?? []) {
         if (h.key !== "afterNormalize") continue;
         const fn = opts.hooks?.get(h.name);
@@ -141,7 +173,7 @@ export function createPersistx(opts: {
         catch (e: any) { throw new HookFailedError(h.name, e?.message ?? String(e)); }
       }
 
-      // map
+      // hooks: beforeMap
       for (const h of def.hooks ?? []) {
         if (h.key !== "beforeMap") continue;
         const fn = opts.hooks?.get(h.name);
@@ -152,6 +184,7 @@ export function createPersistx(opts: {
 
       const data = mapPayload(def, normalized);
 
+      // hooks: afterMap
       for (const h of def.hooks ?? []) {
         if (h.key !== "afterMap") continue;
         const fn = opts.hooks?.get(h.name);
@@ -190,11 +223,11 @@ export function createPersistx(opts: {
       } catch (e: any) {
         throw new DocIdResolutionError(e?.message ?? String(e), {
           formKey: req.formKey,
-          version: req.schemaVersion
+          version: resolvedVersion
         });
       }
 
-      const mode = req.mode ?? def.writeMode;
+      const mode: PersistxMode = (req.mode ?? def.writeMode) as PersistxMode;
 
       // hooks: beforeSave
       for (const h of def.hooks ?? []) {
@@ -206,11 +239,12 @@ export function createPersistx(opts: {
       }
 
       const result = await opts.adapter.save({
+        formKey: req.formKey, // ✅ pass for audit
         collection,
         idStrategy,
         mode,
         data,
-        schemaVersion: req.schemaVersion
+        schemaVersion: resolvedVersion
       });
 
       // hooks: afterSave
@@ -233,6 +267,48 @@ export function createPersistx(opts: {
       }
 
       return result;
+    },
+
+    async submit(formKey, payload, opts2) {
+      return engine.save({
+        formKey,
+        payload,
+        schemaVersion: opts2?.schemaVersion,
+        mode: opts2?.mode,
+        context: { uid: opts2?.uid }
+      });
+    },
+
+    async create(formKey, payload, opts2) {
+      return engine.save({
+        formKey,
+        payload,
+        schemaVersion: opts2?.schemaVersion,
+        mode: "create",
+        context: { uid: opts2?.uid }
+      });
+    },
+
+    async update(formKey, payload, opts2) {
+      return engine.save({
+        formKey,
+        payload,
+        schemaVersion: opts2?.schemaVersion,
+        mode: "update",
+        context: { uid: opts2?.uid }
+      });
+    },
+
+    async upsert(formKey, payload, opts2) {
+      return engine.save({
+        formKey,
+        payload,
+        schemaVersion: opts2?.schemaVersion,
+        mode: "upsert",
+        context: { uid: opts2?.uid }
+      });
     }
   };
+
+  return engine;
 }

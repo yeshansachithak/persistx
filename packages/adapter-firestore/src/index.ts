@@ -34,10 +34,9 @@ type PersistxAudit = {
 
 function withAuditAndTimestamps(
   req: PersistxAdapterSaveRequest,
-  opts: Required<Pick<
-    FirestoreAdapterOptions,
-    "audit" | "auditField" | "timestamps" | "createdAtField" | "updatedAtField"
-  >>
+  opts: Required<
+    Pick<FirestoreAdapterOptions, "audit" | "auditField" | "timestamps" | "createdAtField" | "updatedAtField">
+  >
 ) {
   const data: Record<string, unknown> = { ...req.data };
 
@@ -50,6 +49,7 @@ function withAuditAndTimestamps(
 
   if (opts.audit) {
     const audit: PersistxAudit = {
+      formKey: req.formKey, // ✅ NEW
       schemaVersion: req.schemaVersion,
       mode: req.mode,
       savedAt: FieldValue.serverTimestamp()
@@ -93,14 +93,10 @@ export function createFirestoreAdapter(options: FirestoreAdapterOptions): Persis
 
       // Execute write based on mode
       if (request.mode === "create") {
-        // create() fails if doc exists
         await docRef.create(data);
       } else if (request.mode === "update") {
-        // update() fails if doc does not exist
-        // merge flag does not apply to update(); it updates only specified fields
         await docRef.update(data);
       } else {
-        // upsert
         await docRef.set(data, { merge });
       }
 

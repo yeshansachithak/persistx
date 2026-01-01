@@ -1,5 +1,5 @@
 // packages/core/src/validation.ts
-import type { PersistxFieldDefinition, PersistxFormDefinition } from "./form-definition.js";
+import type { PersistxFormDefinition, PersistxFieldDefinition } from "./form-definition.js";
 
 function isTypeOk(type: string, value: unknown) {
     switch (type) {
@@ -13,6 +13,19 @@ function isTypeOk(type: string, value: unknown) {
     }
 }
 
+function resolveFieldValue(field: PersistxFieldDefinition, payload: Record<string, unknown>) {
+    // primary key wins
+    const direct = payload[field.key];
+    if (direct !== undefined) return direct;
+
+    // aliases are fallback (first found)
+    for (const a of field.aliases ?? []) {
+        const v = payload[a];
+        if (v !== undefined) return v;
+    }
+    return undefined;
+}
+
 export type PersistxValidationError = {
     field: string;
     message: string;
@@ -22,9 +35,12 @@ export function validatePayload(def: PersistxFormDefinition, payload: Record<str
     const errors: PersistxValidationError[] = [];
 
     for (const f of def.fields) {
-        const v = payload[f.key];
+        const v = resolveFieldValue(f, payload);
 
-        const isMissing = v === undefined || v === null || (v === "" && !f.nullable);
+        const isMissing =
+            v === undefined ||
+            v === null ||
+            (v === "" && !f.nullable);
 
         // required
         if (f.rules?.some(r => r.kind === "required") && isMissing) {
