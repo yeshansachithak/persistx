@@ -1,14 +1,16 @@
-// package/core/src/index.ts
+// packages/core/src/index.ts
+
+// Re-export public browser-safe surface
+export * from "./types.js";
 export * from "./form-definition.js";
 export * from "./registry.js";
 export * from "./mapper.js";
 export * from "./validation.js";
-
-export * from "./definition-errors.js";
-export * from "./definition-loader.js";
 export * from "./normalize.js";
 export * from "./hooks.js";
-export * from "./types.js";
+export * from "./definition-errors.js";
+
+// ❌ DO NOT export definition-loader here (Node-only)
 
 import type { PersistxHookRegistry, PersistxHookContext } from "./hooks.js";
 import { normalizePayload } from "./normalize.js";
@@ -27,38 +29,10 @@ import type {
   PersistxMode,
   PersistxSaveRequest,
   PersistxSaveResult,
+  PersistxAdapterSaveRequest,
   PersistxAdapter,
-  PersistxAdapterSaveRequest
+  PersistxEngine
 } from "./types.js";
-
-export type PersistxEngine = {
-  save(req: PersistxSaveRequest<Record<string, unknown>>): Promise<PersistxSaveResult>;
-
-  /** Junior-friendly helpers */
-  submit(
-    formKey: string,
-    payload: Record<string, unknown>,
-    opts?: { uid?: string; mode?: PersistxMode; schemaVersion?: number }
-  ): Promise<PersistxSaveResult>;
-
-  create(
-    formKey: string,
-    payload: Record<string, unknown>,
-    opts?: { uid?: string; schemaVersion?: number }
-  ): Promise<PersistxSaveResult>;
-
-  update(
-    formKey: string,
-    payload: Record<string, unknown>,
-    opts?: { uid?: string; schemaVersion?: number }
-  ): Promise<PersistxSaveResult>;
-
-  upsert(
-    formKey: string,
-    payload: Record<string, unknown>,
-    opts?: { uid?: string; schemaVersion?: number }
-  ): Promise<PersistxSaveResult>;
-};
 
 export function createPersistx(opts: {
   adapter: PersistxAdapter;
@@ -70,8 +44,9 @@ export function createPersistx(opts: {
     dropUndefined?: boolean;
   };
 }): PersistxEngine {
+  // define engine first so hooks can call engine.save safely
   const engine: PersistxEngine = {
-    async save(req) {
+    async save(req: PersistxSaveRequest<Record<string, unknown>>): Promise<PersistxSaveResult> {
       const resolvedVersion = req.schemaVersion ?? opts.registry.getLatestVersion(req.formKey);
       if (!resolvedVersion) throw new DefinitionNotFoundError(req.formKey, req.schemaVersion ?? -1);
 
@@ -80,17 +55,14 @@ export function createPersistx(opts: {
 
       const nowISO = req.context?.nowISO ?? new Date().toISOString();
 
+      // hook context: add save() for multi-collection orchestration via hooks
       const hookContext: PersistxHookContext = {
         formKey: req.formKey,
         schemaVersion: resolvedVersion,
         mode: (req.mode ?? def.writeMode) as PersistxMode,
         uid: req.context?.uid,
         nowISO,
-
-        save: async (childReq) => {
-          const r = childReq as PersistxSaveRequest<Record<string, unknown>>;
-          return engine.save(r);
-        }
+        save: async (childReq) => engine.save(childReq)
       };
 
       const payload = (req.payload ?? {}) as Record<string, unknown>;
@@ -104,7 +76,7 @@ export function createPersistx(opts: {
         catch (e: any) { throw new HookFailedError(h.name, e?.message ?? String(e)); }
       }
 
-      // validate
+      // validate (PersistX safety net)
       const validation = validatePayload(def, payload);
       if (!validation.ok) {
         throw new ValidationFailedError("Validation failed", {
@@ -239,7 +211,7 @@ export function createPersistx(opts: {
       return result;
     },
 
-    async submit(formKey, payload, opts2) {
+    async submit(formKey: any, payload: any, opts2: { schemaVersion: any; mode: any; uid: any; }) {
       return engine.save({
         formKey,
         payload,
@@ -249,7 +221,7 @@ export function createPersistx(opts: {
       });
     },
 
-    async create(formKey, payload, opts2) {
+    async create(formKey: any, payload: any, opts2: { schemaVersion: any; uid: any; }) {
       return engine.save({
         formKey,
         payload,
@@ -259,7 +231,7 @@ export function createPersistx(opts: {
       });
     },
 
-    async update(formKey, payload, opts2) {
+    async update(formKey: any, payload: any, opts2: { schemaVersion: any; uid: any; }) {
       return engine.save({
         formKey,
         payload,
@@ -269,7 +241,7 @@ export function createPersistx(opts: {
       });
     },
 
-    async upsert(formKey, payload, opts2) {
+    async upsert(formKey: any, payload: any, opts2: { schemaVersion: any; uid: any; }) {
       return engine.save({
         formKey,
         payload,
