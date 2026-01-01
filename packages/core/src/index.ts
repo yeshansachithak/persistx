@@ -10,7 +10,8 @@ export * from "./normalize.js";
 export * from "./hooks.js";
 export * from "./definition-errors.js";
 
-// ❌ DO NOT export definition-loader here (Node-only)
+// ❌ IMPORTANT: DO NOT export definition-loader from the browser-safe entry.
+// export * from "./definition-loader.js";
 
 import type { PersistxHookRegistry, PersistxHookContext } from "./hooks.js";
 import { normalizePayload } from "./normalize.js";
