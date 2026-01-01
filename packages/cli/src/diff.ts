@@ -154,8 +154,8 @@ function loadDefinitionsWithSource(filePath: string, definitions: any[]): Loaded
 type RenameSuggestion = { fromKey: string; toKey: string; score: number };
 
 function suggestRenames(fromDef: PersistxFormDefinition, toDef: PersistxFormDefinition): RenameSuggestion[] {
-    const fromKeys = new Set(fromDef.fields.map((f: PersistxFieldDefinition) => f.key));
-    const toKeys = new Set(toDef.fields.map((f: PersistxFieldDefinition) => f.key));
+    const fromKeys = new Set<string>(fromDef.fields.map((f: PersistxFieldDefinition) => String(f.key)));
+    const toKeys = new Set<string>(toDef.fields.map((f: PersistxFieldDefinition) => String(f.key)));
 
     const removed: string[] = [...fromKeys].filter((k) => !toKeys.has(k));
     const added: string[] = [...toKeys].filter((k) => !fromKeys.has(k));
