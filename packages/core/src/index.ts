@@ -45,7 +45,6 @@ export function createPersistx(opts: {
     dropUndefined?: boolean;
   };
 }): PersistxEngine {
-  // define engine first so hooks can call engine.save safely
   const engine: PersistxEngine = {
     async save(req: PersistxSaveRequest<Record<string, unknown>>): Promise<PersistxSaveResult> {
       const resolvedVersion = req.schemaVersion ?? opts.registry.getLatestVersion(req.formKey);
@@ -56,7 +55,6 @@ export function createPersistx(opts: {
 
       const nowISO = req.context?.nowISO ?? new Date().toISOString();
 
-      // hook context: add save() for multi-collection orchestration via hooks
       const hookContext: PersistxHookContext = {
         formKey: req.formKey,
         schemaVersion: resolvedVersion,
@@ -77,7 +75,6 @@ export function createPersistx(opts: {
         catch (e: any) { throw new HookFailedError(h.name, e?.message ?? String(e)); }
       }
 
-      // validate (PersistX safety net)
       const validation = validatePayload(def, payload);
       if (!validation.ok) {
         throw new ValidationFailedError("Validation failed", {
@@ -138,7 +135,6 @@ export function createPersistx(opts: {
 
       const collection = req.doc?.collection ?? def.collection;
 
-      // doc id strategy
       let idStrategy: PersistxAdapterSaveRequest["idStrategy"] = { kind: "auto" };
       try {
         switch (def.docIdStrategy.kind) {
@@ -212,7 +208,7 @@ export function createPersistx(opts: {
       return result;
     },
 
-    async submit(formKey: any, payload: any, opts2: { schemaVersion: any; mode: any; uid: any; }) {
+    async submit(formKey, payload, opts2) {
       return engine.save({
         formKey,
         payload,
@@ -222,7 +218,7 @@ export function createPersistx(opts: {
       });
     },
 
-    async create(formKey: any, payload: any, opts2: { schemaVersion: any; uid: any; }) {
+    async create(formKey, payload, opts2) {
       return engine.save({
         formKey,
         payload,
@@ -232,7 +228,7 @@ export function createPersistx(opts: {
       });
     },
 
-    async update(formKey: any, payload: any, opts2: { schemaVersion: any; uid: any; }) {
+    async update(formKey, payload, opts2) {
       return engine.save({
         formKey,
         payload,
@@ -242,7 +238,7 @@ export function createPersistx(opts: {
       });
     },
 
-    async upsert(formKey: any, payload: any, opts2: { schemaVersion: any; uid: any; }) {
+    async upsert(formKey, payload, opts2) {
       return engine.save({
         formKey,
         payload,

@@ -10,6 +10,8 @@
     "node": ">=20"
   },
   "scripts": {
+    "build:order": "npm run build -w @persistx/core && npm run build -w @persistx/core && npm run build -w @persistx/core && npm run build -w @persistx/validator-zod && npm run build -w vite-project",
+    "demo": "npm run dev -w vite-project",
     "build": "npm run -ws build",
     "dev": "npm run -ws dev",
     "test": "npm run -ws test",
