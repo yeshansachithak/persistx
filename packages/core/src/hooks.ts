@@ -1,6 +1,6 @@
 // packages/core/src/hooks.ts
 import type { PersistxFormDefinition } from "./form-definition.js";
-import type { PersistxMode, PersistxSaveRequest, PersistxSaveResult } from "./index.js";
+import type { PersistxMode, PersistxSaveRequest, PersistxSaveResult } from "./types.js";
 
 export type PersistxHookKey =
     | "beforeValidate"
@@ -19,13 +19,6 @@ export type PersistxHookContext = {
     uid?: string;
     nowISO: string;
 
-    /**
-     * Allows hooks to persist additional documents using the same PersistX pipeline
-     * (validate -> normalize -> map -> adapter.save), enabling multi-collection save
-     * from a single UI submit.
-     *
-     * NOTE: This should call the SAME engine instance internally.
-     */
     save?: (req: PersistxSaveRequest<Record<string, unknown>>) => Promise<PersistxSaveResult>;
 };
 

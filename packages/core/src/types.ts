@@ -1,0 +1,54 @@
+// packages/core/src/types.ts
+
+export type PersistxMode = "create" | "update" | "upsert";
+
+export type PersistxSaveRequest<TPayload = unknown> = {
+    formKey: string;
+
+    /**
+     * Optional now.
+     * - If omitted, PersistX will use registry.getLatestVersion(formKey)
+     */
+    schemaVersion?: number;
+
+    /**
+     * Optional now.
+     * - If omitted, PersistX will use def.writeMode
+     */
+    mode?: PersistxMode;
+
+    /** optional override (definition is authoritative, this is for advanced usage/testing) */
+    doc?: {
+        collection?: string;
+        id?: string;
+    };
+
+    payload: TPayload;
+
+    context?: {
+        uid?: string;
+        nowISO?: string;
+    };
+};
+
+export type PersistxSaveResult = {
+    collection: string;
+    id: string;
+    mode: PersistxMode;
+    schemaVersion: number;
+    savedAt: string;
+};
+
+/** Adapter request (what core sends to adapters) */
+export type PersistxAdapterSaveRequest = {
+    formKey?: string; // for audit
+    collection: string;
+    idStrategy: { kind: "auto" } | { kind: "fixed"; id: string };
+    mode: PersistxMode;
+    data: Record<string, unknown>;
+    schemaVersion: number;
+};
+
+export type PersistxAdapter = {
+    save(request: PersistxAdapterSaveRequest): Promise<PersistxSaveResult>;
+};

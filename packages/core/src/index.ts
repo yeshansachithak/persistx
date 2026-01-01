@@ -8,6 +8,7 @@ export * from "./definition-errors.js";
 export * from "./definition-loader.js";
 export * from "./normalize.js";
 export * from "./hooks.js";
+export * from "./types.js";
 
 import type { PersistxHookRegistry, PersistxHookContext } from "./hooks.js";
 import { normalizePayload } from "./normalize.js";
@@ -22,67 +23,41 @@ import type { PersistxFormRegistry } from "./registry.js";
 import { validatePayload } from "./validation.js";
 import { mapPayload } from "./mapper.js";
 
-export type PersistxMode = "create" | "update" | "upsert";
-
-export type PersistxSaveRequest<TPayload = unknown> = {
-  formKey: string;
-
-  /**
-   * Optional now.
-   * - If omitted, PersistX will use registry.getLatest(formKey)
-   */
-  schemaVersion?: number;
-
-  /**
-   * Optional now.
-   * - If omitted, PersistX will use def.writeMode
-   */
-  mode?: PersistxMode;
-
-  /** optional override (definition is authoritative, this is for advanced usage/testing) */
-  doc?: {
-    collection?: string;
-    id?: string;
-  };
-
-  payload: TPayload;
-
-  context?: {
-    uid?: string;
-    nowISO?: string;
-  };
-};
-
-export type PersistxSaveResult = {
-  collection: string;
-  id: string;
-  mode: PersistxMode;
-  schemaVersion: number;
-  savedAt: string;
-};
-
-/** ✅ Explicit adapter request type */
-export type PersistxAdapterSaveRequest = {
-  formKey?: string; // ✅ NEW (for audit)
-  collection: string;
-  idStrategy: { kind: "auto" } | { kind: "fixed"; id: string };
-  mode: PersistxMode;
-  data: Record<string, unknown>;
-  schemaVersion: number;
-};
-
-export type PersistxAdapter = {
-  save(request: PersistxAdapterSaveRequest): Promise<PersistxSaveResult>;
-};
+import type {
+  PersistxMode,
+  PersistxSaveRequest,
+  PersistxSaveResult,
+  PersistxAdapter,
+  PersistxAdapterSaveRequest
+} from "./types.js";
 
 export type PersistxEngine = {
   save(req: PersistxSaveRequest<Record<string, unknown>>): Promise<PersistxSaveResult>;
 
   /** Junior-friendly helpers */
-  submit(formKey: string, payload: Record<string, unknown>, opts?: { uid?: string; mode?: PersistxMode; schemaVersion?: number }): Promise<PersistxSaveResult>;
-  create(formKey: string, payload: Record<string, unknown>, opts?: { uid?: string; schemaVersion?: number }): Promise<PersistxSaveResult>;
-  update(formKey: string, payload: Record<string, unknown>, opts?: { uid?: string; schemaVersion?: number }): Promise<PersistxSaveResult>;
-  upsert(formKey: string, payload: Record<string, unknown>, opts?: { uid?: string; schemaVersion?: number }): Promise<PersistxSaveResult>;
+  submit(
+    formKey: string,
+    payload: Record<string, unknown>,
+    opts?: { uid?: string; mode?: PersistxMode; schemaVersion?: number }
+  ): Promise<PersistxSaveResult>;
+
+  create(
+    formKey: string,
+    payload: Record<string, unknown>,
+    opts?: { uid?: string; schemaVersion?: number }
+  ): Promise<PersistxSaveResult>;
+
+  update(
+    formKey: string,
+    payload: Record<string, unknown>,
+    opts?: { uid?: string; schemaVersion?: number }
+  ): Promise<PersistxSaveResult>;
+
+  upsert(
+    formKey: string,
+    payload: Record<string, unknown>,
+    opts?: { uid?: string; schemaVersion?: number }
+  ): Promise<PersistxSaveResult>;
 };
 
 export function createPersistx(opts: {
@@ -95,7 +70,6 @@ export function createPersistx(opts: {
     dropUndefined?: boolean;
   };
 }): PersistxEngine {
-  // define engine first so hooks can call engine.save safely
   const engine: PersistxEngine = {
     async save(req) {
       const resolvedVersion = req.schemaVersion ?? opts.registry.getLatestVersion(req.formKey);
@@ -106,7 +80,6 @@ export function createPersistx(opts: {
 
       const nowISO = req.context?.nowISO ?? new Date().toISOString();
 
-      // hook context: add save() for multi-collection orchestration via hooks
       const hookContext: PersistxHookContext = {
         formKey: req.formKey,
         schemaVersion: resolvedVersion,
@@ -114,10 +87,7 @@ export function createPersistx(opts: {
         uid: req.context?.uid,
         nowISO,
 
-        // ✅ allows hooks to persist additional docs via PersistX pipeline
         save: async (childReq) => {
-          // childReq is intentionally lightweight to avoid strong coupling in hooks typings
-          // but it still goes through the same PersistX engine pipeline.
           const r = childReq as PersistxSaveRequest<Record<string, unknown>>;
           return engine.save(r);
         }
@@ -134,7 +104,7 @@ export function createPersistx(opts: {
         catch (e: any) { throw new HookFailedError(h.name, e?.message ?? String(e)); }
       }
 
-      // validate (PersistX safety net)
+      // validate
       const validation = validatePayload(def, payload);
       if (!validation.ok) {
         throw new ValidationFailedError("Validation failed", {
@@ -239,7 +209,7 @@ export function createPersistx(opts: {
       }
 
       const result = await opts.adapter.save({
-        formKey: req.formKey, // ✅ pass for audit
+        formKey: req.formKey,
         collection,
         idStrategy,
         mode,
