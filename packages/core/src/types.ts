@@ -7,7 +7,7 @@ export type PersistxSaveRequest<TPayload = unknown> = {
 
     /**
      * Optional now.
-     * - If omitted, PersistX will use registry.getLatestVersion(formKey)
+     * - If omitted, PersistX will use registry.getLatest(formKey)
      */
     schemaVersion?: number;
 
@@ -39,7 +39,7 @@ export type PersistxSaveResult = {
     savedAt: string;
 };
 
-/** Adapter request (what core sends to adapters) */
+/** ✅ Explicit adapter request type */
 export type PersistxAdapterSaveRequest = {
     formKey?: string; // for audit
     collection: string;
