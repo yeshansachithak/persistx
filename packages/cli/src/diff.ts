@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import type { PersistxFormDefinition } from "@persistx/core";
+import type { PersistxFieldDefinition } from "@persistx/core";
 
 type LoadedDef = {
     filePath: string;
@@ -139,8 +140,12 @@ function readJsonArray(filePath: string): any[] {
 type RenameSuggestion = { fromKey: string; toKey: string; score: number };
 
 function suggestRenames(fromDef: PersistxFormDefinition, toDef: PersistxFormDefinition): RenameSuggestion[] {
-    const fromKeys: Set<string> = new Set(fromDef.fields.map((f) => f.key));
-    const toKeys: Set<string> = new Set(toDef.fields.map((f) => f.key));
+    const fromKeys = new Set(
+        fromDef.fields.map((f: PersistxFieldDefinition) => f.key)
+    );
+    const toKeys = new Set(
+        toDef.fields.map((f: PersistxFieldDefinition) => f.key)
+    );
 
     const removed: string[] = [...fromKeys].filter((k) => !toKeys.has(k));
     const added: string[] = [...toKeys].filter((k) => !fromKeys.has(k));
