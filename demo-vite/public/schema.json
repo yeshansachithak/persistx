@@ -1,0 +1,78 @@
+{
+    "persistx": 1,
+    "definitions": [
+        {
+            "formKey": "petProfile",
+            "version": 1,
+            "collection": "petProfiles",
+            "docIdStrategy": {
+                "kind": "uid"
+            },
+            "writeMode": "upsert",
+            "allowUnknownFields": false,
+            "fields": [
+                {
+                    "key": "petName",
+                    "type": "string",
+                    "rules": [
+                        {
+                            "kind": "required"
+                        }
+                    ]
+                },
+                {
+                    "key": "petType",
+                    "type": "string",
+                    "rules": [
+                        {
+                            "kind": "required"
+                        }
+                    ]
+                },
+                {
+                    "key": "age",
+                    "type": "number",
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "formKey": "petProfile",
+            "version": 2,
+            "collection": "petProfiles",
+            "docIdStrategy": {
+                "kind": "uid"
+            },
+            "writeMode": "upsert",
+            "allowUnknownFields": false,
+            "fields": [
+                {
+                    "key": "petName",
+                    "type": "string",
+                    "rules": [
+                        {
+                            "kind": "required"
+                        }
+                    ]
+                },
+                {
+                    "key": "type",
+                    "type": "string",
+                    "rules": [
+                        {
+                            "kind": "required"
+                        }
+                    ],
+                    "aliases": [
+                        "petType"
+                    ]
+                },
+                {
+                    "key": "age",
+                    "type": "number",
+                    "nullable": true
+                }
+            ]
+        }
+    ]
+}
