@@ -7,17 +7,25 @@ type SchemaFile = { raw: any; definitions: any[] };
 
 export async function runMigrate(opts: {
     file: string;
+    cwd?: string;
+
     form: string;
     from?: number;
     to?: number;
+
     input: string;
     out?: string;
+
     apply: boolean;
+    keepUnknown: boolean;
+    report: boolean;
 }) {
-    const schemaPath = path.resolve(process.cwd(), opts.file);
+    const base = opts.cwd ? path.resolve(process.cwd(), opts.cwd) : process.cwd();
+
+    const schemaPath = path.resolve(base, opts.file);
     if (!fs.existsSync(schemaPath)) throw new Error(`Schema file not found: ${schemaPath}`);
 
-    const inputPath = path.resolve(process.cwd(), opts.input);
+    const inputPath = path.resolve(base, opts.input);
     if (!fs.existsSync(inputPath)) throw new Error(`Input file not found: ${inputPath}`);
 
     const schema = readSchemaFile(schemaPath);
@@ -39,9 +47,17 @@ export async function runMigrate(opts: {
     const rawIn = JSON.parse(fs.readFileSync(inputPath, "utf-8")) as unknown;
     const payloads = Array.isArray(rawIn) ? rawIn : [rawIn];
 
-    const migrated = payloads.map((p) => migrateOne(p as Record<string, unknown>, fromDef, toDef));
+    const migrated = payloads.map((p, idx) =>
+        migrateOne(p as Record<string, unknown>, fromDef, toDef, {
+            keepUnknown: opts.keepUnknown,
+            report: opts.report,
+            index: idx,
+            fromV,
+            toV
+        })
+    );
 
-    const outObj = Array.isArray(rawIn) ? migrated : migrated[0];
+    const outObj = Array.isArray(rawIn) ? migrated.map(x => x.out) : migrated[0]!.out;
 
     // preview
     if (!opts.apply) {
@@ -52,7 +68,7 @@ export async function runMigrate(opts: {
     }
 
     const outPath = path.resolve(
-        process.cwd(),
+        base,
         opts.out ? opts.out : `${opts.input}.migrated.json`
     );
 
@@ -60,12 +76,19 @@ export async function runMigrate(opts: {
     console.log(`\n✍️ wrote: ${outPath}`);
 }
 
-function migrateOne(payload: Record<string, unknown>, fromDef: PersistxFormDefinition, toDef: PersistxFormDefinition) {
+function migrateOne(
+    payload: Record<string, unknown>,
+    _fromDef: PersistxFormDefinition,
+    toDef: PersistxFormDefinition,
+    opts: { keepUnknown: boolean; report: boolean; index: number; fromV: number; toV: number }
+) {
     // Build alias map for "to" fields: alias -> canonical
     const aliasToCanonical = new Map<string, string>();
+    const canonicalSet = new Set<string>();
 
     for (const f of toDef.fields as PersistxFieldDefinition[]) {
         const canonical = String(f.key);
+        canonicalSet.add(canonical);
         aliasToCanonical.set(canonical, canonical);
 
         const aliases = (f as any).aliases;
@@ -74,19 +97,42 @@ function migrateOne(payload: Record<string, unknown>, fromDef: PersistxFormDefin
         }
     }
 
-    // Only keep keys that exist in toDef (either canonical or alias)
     const out: Record<string, unknown> = {};
+    const unknown: Record<string, unknown> = {};
+    const remapped: Array<{ from: string; to: string }> = [];
+    const dropped: string[] = [];
 
     for (const [k, v] of Object.entries(payload ?? {})) {
         const canonical = aliasToCanonical.get(k);
-        if (!canonical) continue; // drop unknown on purpose (migration safety)
+        if (!canonical) {
+            if (opts.keepUnknown) unknown[k] = v;
+            else dropped.push(k);
+            continue;
+        }
+        if (canonical !== k) remapped.push({ from: k, to: canonical });
         out[canonical] = v;
     }
 
-    // if you want: you can also move fromDef canonical keys -> toDef canonical via aliases
-    // (already covered above because toDef includes old keys as aliases after diff/apply)
+    if (opts.keepUnknown && Object.keys(unknown).length > 0) {
+        out["_unknown"] = unknown;
+    }
 
-    return out;
+    if (opts.report) {
+        // report to stderr so piping stdout stays clean
+        const idxLabel = Array.isArray(payload) ? "" : `#${opts.index}`;
+        console.error(
+            [
+                `\n[migrate report ${idxLabel}] v${opts.fromV} -> v${opts.toV}`,
+                `  kept keys: ${Object.keys(out).filter(k => k !== "_unknown").length}`,
+                `  remapped: ${remapped.length}`,
+                `  dropped: ${dropped.length}`,
+                remapped.length ? `  remapped list: ${remapped.map(r => `${r.from}->${r.to}`).join(", ")}` : "",
+                dropped.length ? `  dropped list: ${dropped.join(", ")}` : ""
+            ].filter(Boolean).join("\n")
+        );
+    }
+
+    return { out, remapped, dropped };
 }
 
 function readSchemaFile(filePath: string): SchemaFile {

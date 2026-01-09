@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 // packages/cli/src/index.ts
 import { runDiff } from "./diff.js";
 import { runInit } from "./init.js";
@@ -43,31 +42,39 @@ persistx (PersistX CLI)
 
 Usage:
   persistx init [--file <schemaFile>] [--force]
-  persistx diff [--file <schemaFile>] [--apply] [--yes] [--form <formKey>] [--from <v>] [--to <v>]
-  persistx migrate [--file <schemaFile>] --form <formKey> [--from <v>] [--to <v>] --input <jsonFile> [--out <jsonFile>] [--apply]
+  persistx diff [--file <schemaFile>] [--apply] [--yes] [--force-yes] [--min-score <n>] [--strict] [--form <formKey>] [--from <v>] [--to <v>] [--cwd <path>]
+  persistx migrate [--file <schemaFile>] --form <formKey> [--from <v>] [--to <v>] --input <jsonFile> [--out <jsonFile>] [--apply] [--keep-unknown] [--report] [--cwd <path>]
 
 Commands:
-  init     Create a single schema.json (Option A) at definitions/schema.json
-  diff     Suggest "aliases" mappings (field renames) between versions
-  migrate  Transform payload JSON from one version to another (preview or write)
+  init     Create a single schema.json (Option A)
+  diff     Suggest alias mappings (field renames) between versions
+  migrate  Transform payload JSON from one version to another
 
 Options:
-  --file   Schema file path (default: ./definitions/schema.json)
-  --apply  Write changes (diff: updates schema; migrate: writes migrated output)
-  --yes    Auto-accept suggestions (diff only)
-  --form   Only run for a specific formKey
-  --from   Compare/migrate from version (optional)
-  --to     Compare/migrate to version (optional)
-  --force  Overwrite schema file (init only)
+  --file       Schema file path (default: ./definitions/schema.json)
+  --cwd        Base directory to resolve --file/--input/--out (default: current working directory)
+  --apply      Write changes (diff: updates schema; migrate: writes migrated output)
+  --yes        Non-interactive (diff only). Auto-accept SAFE suggestions only.
+  --force-yes  With --yes, accept even ambiguous/low-confidence suggestions (dangerous).
+  --min-score  Minimum score for suggestions (default: 0.70)
+  --strict     Make it harder to map into generic keys like "type", "id" unless very high confidence
+  --form       Only run for a specific formKey
+  --from       Compare/migrate from version (optional)
+  --to         Compare/migrate to version (optional)
+  --force      Overwrite schema file (init only)
 
 Migrate options:
-  --input  Input JSON file containing payload or array of payloads
-  --out    Output JSON file (default: <input>.migrated.json)
+  --input       Input JSON file containing payload or array of payloads
+  --out         Output JSON file (default: <input>.migrated.json)
+  --keep-unknown Put dropped keys under _unknown instead of discarding them
+  --report      Print a per-payload migration report to stderr
 
 Examples:
   persistx init
-  persistx diff --file ./definitions/schema.json --apply
-  persistx migrate --form petProfile --input ./payload.json --apply
+  persistx diff --file ./demo-vite/public/schema.json
+  persistx diff --file ./demo-vite/public/schema.json --apply
+  persistx diff --file ./demo-vite/public/schema.json --yes
+  persistx migrate --file ./demo-vite/public/schema.json --form petProfile --from 1 --to 2 --input ./payload.json --apply
 `);
 }
 
@@ -95,23 +102,34 @@ function parseInitArgs(args: string[]) {
 function parseDiffArgs(args: string[]) {
     const opts: {
         file: string;
+        cwd?: string;
         apply: boolean;
         yes: boolean;
+        forceYes: boolean;
+        minScore: number;
+        strict: boolean;
         form?: string;
         from?: number;
         to?: number;
     } = {
         file: "./definitions/schema.json",
         apply: false,
-        yes: false
+        yes: false,
+        forceYes: false,
+        minScore: 0.7,
+        strict: false
     };
 
     for (let i = 0; i < args.length; i++) {
         const a = args[i];
 
         if (a === "--file") opts.file = String(args[++i] ?? opts.file);
+        else if (a === "--cwd") opts.cwd = String(args[++i] ?? "");
         else if (a === "--apply") opts.apply = true;
         else if (a === "--yes") opts.yes = true;
+        else if (a === "--force-yes") opts.forceYes = true;
+        else if (a === "--min-score") opts.minScore = Number(args[++i]);
+        else if (a === "--strict") opts.strict = true;
         else if (a === "--form") opts.form = String(args[++i] ?? "");
         else if (a === "--from") opts.from = Number(args[++i]);
         else if (a === "--to") opts.to = Number(args[++i]);
@@ -121,6 +139,10 @@ function parseDiffArgs(args: string[]) {
         } else {
             console.warn(`Ignoring unknown arg: ${a}`);
         }
+    }
+
+    if (!Number.isFinite(opts.minScore) || opts.minScore < 0 || opts.minScore > 1) {
+        throw new Error(`--min-score must be between 0 and 1`);
     }
 
     if (opts.from !== undefined && (!Number.isInteger(opts.from) || opts.from < 1)) {
@@ -136,27 +158,35 @@ function parseDiffArgs(args: string[]) {
 function parseMigrateArgs(args: string[]) {
     const opts: {
         file: string;
+        cwd?: string;
         form?: string;
         from?: number;
         to?: number;
         input?: string;
         out?: string;
         apply: boolean;
+        keepUnknown: boolean;
+        report: boolean;
     } = {
         file: "./definitions/schema.json",
-        apply: false
+        apply: false,
+        keepUnknown: false,
+        report: false
     };
 
     for (let i = 0; i < args.length; i++) {
         const a = args[i];
 
         if (a === "--file") opts.file = String(args[++i] ?? opts.file);
+        else if (a === "--cwd") opts.cwd = String(args[++i] ?? "");
         else if (a === "--form") opts.form = String(args[++i] ?? "");
         else if (a === "--from") opts.from = Number(args[++i]);
         else if (a === "--to") opts.to = Number(args[++i]);
         else if (a === "--input") opts.input = String(args[++i] ?? "");
         else if (a === "--out") opts.out = String(args[++i] ?? "");
         else if (a === "--apply") opts.apply = true;
+        else if (a === "--keep-unknown") opts.keepUnknown = true;
+        else if (a === "--report") opts.report = true;
         else if (a === "-h" || a === "--help") {
             printHelp();
             process.exit(0);

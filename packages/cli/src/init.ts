@@ -14,16 +14,76 @@ export async function runInit(opts: { file: string; force: boolean }) {
     const schema = {
         persistx: 1,
         definitions: [
+            // =========================
+            // petProfile v1
+            // =========================
             {
-                formKey: "exampleForm",
+                formKey: "petProfile",
                 version: 1,
-                collection: "exampleForms",
+                collection: "petProfiles",
                 docIdStrategy: { kind: "uid" },
                 writeMode: "upsert",
                 allowUnknownFields: false,
                 fields: [
-                    { key: "name", type: "string", rules: [{ kind: "required" }] },
+                    { key: "petName", type: "string", rules: [{ kind: "required" }] },
+                    { key: "petType", type: "string", rules: [{ kind: "required" }] },
                     { key: "age", type: "number", nullable: true }
+                ]
+            },
+
+            // =========================
+            // petProfile v2 (petType renamed -> type)
+            // =========================
+            {
+                formKey: "petProfile",
+                version: 2,
+                collection: "petProfiles",
+                docIdStrategy: { kind: "uid" },
+                writeMode: "upsert",
+                allowUnknownFields: false,
+                fields: [
+                    { key: "petName", type: "string", rules: [{ kind: "required" }] },
+
+                    // renamed field
+                    { key: "type", type: "string", rules: [{ kind: "required" }] },
+
+                    { key: "age", type: "number", nullable: true }
+                ]
+            },
+
+            // =========================
+            // profile v1
+            // =========================
+            {
+                formKey: "profile",
+                version: 1,
+                collection: "profiles",
+                docIdStrategy: { kind: "uid" },
+                writeMode: "upsert",
+                allowUnknownFields: false,
+                fields: [
+                    { key: "firstName", type: "string", rules: [{ kind: "required" }] },
+                    { key: "lastName", type: "string", rules: [{ kind: "required" }] },
+                    { key: "phoneNumber", type: "string", nullable: true }
+                ]
+            },
+
+            // =========================
+            // profile v2 (phoneNumber -> phone)
+            // =========================
+            {
+                formKey: "profile",
+                version: 2,
+                collection: "profiles",
+                docIdStrategy: { kind: "uid" },
+                writeMode: "upsert",
+                allowUnknownFields: false,
+                fields: [
+                    { key: "firstName", type: "string", rules: [{ kind: "required" }] },
+                    { key: "lastName", type: "string", rules: [{ kind: "required" }] },
+
+                    // renamed field
+                    { key: "phone", type: "string", nullable: true }
                 ]
             }
         ]

@@ -18,13 +18,21 @@ type SchemaFile = {
 
 export async function runDiff(opts: {
     file: string;
+    cwd?: string;
+
     apply: boolean;
     yes: boolean;
+    forceYes: boolean;
+    minScore: number;
+    strict: boolean;
+
     form?: string;
     from?: number;
     to?: number;
 }) {
-    const fileAbs = path.resolve(process.cwd(), opts.file);
+    const base = opts.cwd ? path.resolve(process.cwd(), opts.cwd) : process.cwd();
+    const fileAbs = path.resolve(base, opts.file);
+
     if (!fs.existsSync(fileAbs)) throw new Error(`Schema file not found: ${fileAbs}`);
 
     const schema = readSchemaFile(fileAbs);
@@ -67,7 +75,10 @@ export async function runDiff(opts: {
 
         console.log(`\n=== ${formKey}: v${fromV} -> v${toV} ===`);
 
-        const suggestions = suggestRenames(fromDef.def, toDef.def);
+        const suggestions = suggestRenames(fromDef.def, toDef.def, {
+            minScore: opts.minScore,
+            strict: opts.strict
+        });
 
         if (suggestions.length === 0) {
             console.log("No rename suggestions found.");
@@ -75,12 +86,21 @@ export async function runDiff(opts: {
         }
 
         for (const s of suggestions) {
-            const defaultYes = s.score >= 0.88 && !s.ambiguous;
-            const msg = s.ambiguous
-                ? `Map "${s.fromKey}" -> "${s.toKey}" ? (score=${s.score.toFixed(2)}, ambiguous)`
+            const hardBlock =
+                s.ambiguous ||
+                (opts.strict && isGenericKey(s.toKey) && s.score < 0.9);
+
+            // In interactive mode: defaultYes only when it is "safe"
+            const defaultYes = !hardBlock && s.score >= 0.88;
+
+            const msg = hardBlock
+                ? `Map "${s.fromKey}" -> "${s.toKey}" ? (score=${s.score.toFixed(2)}${s.ambiguous ? ", ambiguous" : ""}${isGenericKey(s.toKey) ? ", generic-target" : ""})`
                 : `Map "${s.fromKey}" -> "${s.toKey}" ? (score=${s.score.toFixed(2)})`;
 
-            const accept = opts.yes ? true : await askYesNo(rl!, msg, defaultYes);
+            // In --yes mode: accept only safe unless forceYes
+            const accept = opts.yes
+                ? (opts.forceYes ? true : !hardBlock)
+                : await askYesNo(rl!, msg, defaultYes);
 
             if (!accept) continue;
 
@@ -109,6 +129,7 @@ export async function runDiff(opts: {
 function readSchemaFile(filePath: string): SchemaFile {
     const rawText = fs.readFileSync(filePath, "utf-8");
     let parsed: unknown;
+
     try {
         parsed = JSON.parse(rawText);
     } catch (e: any) {
@@ -127,7 +148,10 @@ function readSchemaFile(filePath: string): SchemaFile {
 }
 
 function writeSchemaFile(filePath: string, schema: SchemaFile) {
-    const outJson = Array.isArray(schema.raw) ? schema.definitions : { ...schema.raw, definitions: schema.definitions };
+    const outJson = Array.isArray(schema.raw)
+        ? schema.definitions
+        : { ...schema.raw, definitions: schema.definitions };
+
     fs.writeFileSync(filePath, JSON.stringify(outJson, null, 2) + "\n", "utf-8");
 }
 
@@ -143,7 +167,11 @@ function loadDefinitionsWithSource(filePath: string, definitions: any[]): Loaded
 
 type RenameSuggestion = { fromKey: string; toKey: string; score: number; ambiguous: boolean };
 
-function suggestRenames(fromDef: PersistxFormDefinition, toDef: PersistxFormDefinition): RenameSuggestion[] {
+function suggestRenames(
+    fromDef: PersistxFormDefinition,
+    toDef: PersistxFormDefinition,
+    cfg: { minScore: number; strict: boolean }
+): RenameSuggestion[] {
     const fromKeys = new Set<string>(fromDef.fields.map((f: PersistxFieldDefinition) => String(f.key)));
     const toKeys = new Set<string>(toDef.fields.map((f: PersistxFieldDefinition) => String(f.key)));
 
@@ -152,7 +180,7 @@ function suggestRenames(fromDef: PersistxFormDefinition, toDef: PersistxFormDefi
 
     if (removed.length === 0 || added.length === 0) return [];
 
-    const allSuggestions: RenameSuggestion[] = [];
+    const all: RenameSuggestion[] = [];
 
     for (const r of removed) {
         const ranked = added
@@ -162,27 +190,34 @@ function suggestRenames(fromDef: PersistxFormDefinition, toDef: PersistxFormDefi
         const best = ranked[0];
         if (!best) continue;
 
-        // Ambiguity: if 2nd place is close, don’t default to yes
         const second = ranked[1];
         const ambiguous = !!second && (best.score - second.score) < 0.06 && best.score < 0.95;
 
-        if (best.score >= 0.62) {
-            allSuggestions.push({ fromKey: r, toKey: best.a, score: best.score, ambiguous });
+        // Strict mode: require higher minimum when mapping into generic keys
+        const minScore = (cfg.strict && isGenericKey(best.a)) ? Math.max(cfg.minScore, 0.78) : cfg.minScore;
+
+        if (best.score >= minScore) {
+            all.push({ fromKey: r, toKey: best.a, score: best.score, ambiguous });
         }
     }
 
-    allSuggestions.sort((x, y) => y.score - x.score);
+    all.sort((x, y) => y.score - x.score);
 
-    // Dedupe: only one mapping per toKey
+    // Dedupe target key
     const usedTo = new Set<string>();
     const final: RenameSuggestion[] = [];
-    for (const s of allSuggestions) {
+    for (const s of all) {
         if (usedTo.has(s.toKey)) continue;
         usedTo.add(s.toKey);
         final.push(s);
     }
 
     return final;
+}
+
+function isGenericKey(k: string) {
+    const x = String(k).toLowerCase();
+    return x === "id" || x === "uid" || x === "type" || x === "key" || x === "value" || x === "name";
 }
 
 function similarityScore(a: string, b: string): number {
@@ -205,21 +240,17 @@ function similarityScore(a: string, b: string): number {
     const contains = na.includes(nb) || nb.includes(na) ? 0.08 : 0;
     const prefix = na.startsWith(nb) || nb.startsWith(na) ? 0.06 : 0;
 
-    // (4) short-key penalty: mapping to "type" / "id" etc shouldn’t become “high confidence”
-    const shortPenalty = Math.min(0.18, shortKeyPenalty(na, nb));
+    // (4) short-key penalty
+    const shortPenalty = Math.min(0.18, shortKeyPenalty(na, nb, ta, tb));
 
-    // Weighted blend
     const score = (0.62 * edit) + (0.32 * token) + contains + prefix - shortPenalty;
     return clamp(score, 0, 1);
 }
 
 function tokenize(s: string): string[] {
     const raw = String(s).trim();
-
-    // split camelCase boundaries then non-alphanum
     const camel = raw.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
     const parts = camel.split(/[^a-zA-Z0-9]+/g).filter(Boolean);
-
     return parts.map((p) => p.toLowerCase());
 }
 
@@ -231,19 +262,25 @@ function jaccard(a: Set<string>, b: Set<string>): number {
     return union === 0 ? 0 : inter / union;
 }
 
-function shortKeyPenalty(na: string, nb: string): number {
+function shortKeyPenalty(na: string, nb: string, ta: Set<string>, tb: Set<string>): number {
     const shortSet = new Set(["id", "uid", "type", "name", "key", "value"]);
     const isShortTarget = shortSet.has(nb) || nb.length <= 3;
-    const isShortSource = shortSet.has(na) || na.length <= 3;
+    if (!isShortTarget) return 0;
 
-    // penalize when mapping involves very short canonical names without token overlap
-    if (isShortTarget && !isShortSource) return 0.14;
-    if (isShortTarget && isShortSource) return 0.06;
-    return 0;
+    // if tokens overlap, don’t punish too much
+    const tokenOverlap = [...ta].some((t) => tb.has(t));
+    if (tokenOverlap) return 0.04;
+
+    // mapping to generic targets should not become “high confidence”
+    return 0.14;
 }
 
 function normalizeKey(s: string): string {
-    return String(s).trim().toLowerCase().replace(/[\s_\-]/g, "").replace(/[^a-z0-9.]/g, "");
+    return String(s)
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_\-]/g, "")
+        .replace(/[^a-z0-9.]/g, "");
 }
 
 function levenshtein(a: string, b: string): number {
