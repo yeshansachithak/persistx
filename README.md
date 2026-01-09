@@ -252,6 +252,52 @@ PersistX is a **contract layer**.
 
 ---
 
+## When Should You Use PersistX?
+
+PersistX is a good fit when:
+
+* you have **multiple clients** (web, mobile, kiosk, legacy) submitting data
+* your **schemas evolve over time** and old clients must keep working
+* you want **explicit control** over renames, versions, and migrations
+* you use **document-style storage** (Firestore, MongoDB, KV stores, REST APIs)
+
+If your data model is static and tightly coupled to a single backend, PersistX may be unnecessary.
+
+---
+
+## Adapter Example
+
+PersistX adapters are intentionally small and explicit. A typical Firestore-style adapter looks like:
+
+```ts
+import type { PersistxAdapter } from "@persistx/core";
+
+const adapter: PersistxAdapter = {
+  async save(req) {
+    const id = req.idStrategy.kind === "fixed"
+      ? req.idStrategy.id
+      : crypto.randomUUID();
+
+    await db
+      .collection(req.collection)
+      .doc(id)
+      .set(req.data, { merge: req.mode === "upsert" });
+
+    return {
+      collection: req.collection,
+      id,
+      mode: req.mode,
+      schemaVersion: req.schemaVersion,
+      savedAt: new Date().toISOString()
+    };
+  }
+};
+```
+
+Adapters **never receive invalid or unmapped data** — PersistX enforces that contract.
+
+---
+
 ## Status
 
 * Core: stable
