@@ -154,7 +154,7 @@ export function createPersistx(opts: {
           }
           case "uid": {
             const uid = req.context?.uid;
-            if (!uid) throw new Error(`docIdStrategy.uid requires context.uid`);
+            if (!uid) throw new Error(`docIdStrategy.id requires context.uid`);
             idStrategy = { kind: "fixed", id: uid };
             break;
           }

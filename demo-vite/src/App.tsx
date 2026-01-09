@@ -28,6 +28,65 @@ function pretty(x: any) {
   return JSON.stringify(x, null, 2);
 }
 
+function Badge({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 shadow-sm">
+      {children}
+    </span>
+  );
+}
+
+function Card({
+  title,
+  subtitle,
+  children,
+  right
+}: {
+  title: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
+      <div className="flex items-start justify-between gap-4 border-b border-zinc-100 px-5 py-4">
+        <div>
+          <div className="text-sm font-semibold text-zinc-900">{title}</div>
+          {subtitle ? <div className="mt-0.5 text-xs text-zinc-500">{subtitle}</div> : null}
+        </div>
+        {right ? <div className="shrink-0">{right}</div> : null}
+      </div>
+      <div className="px-5 py-4">{children}</div>
+    </div>
+  );
+}
+
+function Button({
+  children,
+  onClick,
+  variant = "primary",
+  disabled
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  variant?: "primary" | "secondary" | "danger" | "ghost";
+  disabled?: boolean;
+}) {
+  const base =
+    "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed";
+  const styles: Record<string, string> = {
+    primary: "bg-zinc-900 text-white hover:bg-zinc-800",
+    secondary: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200",
+    danger: "bg-rose-600 text-white hover:bg-rose-500",
+    ghost: "bg-transparent text-zinc-700 hover:bg-zinc-100"
+  };
+  return (
+    <button className={`${base} ${styles[variant]}`} onClick={onClick} disabled={disabled}>
+      {children}
+    </button>
+  );
+}
+
 export default function App() {
   const [engine, setEngine] = useState<EngineState | null>(null);
   const [err, setErr] = useState<string>("");
@@ -48,11 +107,9 @@ export default function App() {
   }, []);
 
   const availableFormKeys = useMemo(() => {
-    if (!engine) return [];
-    // registry internals aren’t exposed; we can infer from schema by reading /schema.json if needed.
-    // For now: show common keys (demo-friendly). You can expand later.
+    // Demo-friendly list; you can auto-detect later if you want.
     return ["petProfile", "profile"];
-  }, [engine]);
+  }, []);
 
   const numericVersion = schemaVersion === "latest" ? undefined : Number(schemaVersion);
 
@@ -112,98 +169,194 @@ export default function App() {
     });
   };
 
-  if (err && !engine) {
-    return (
-      <div style={{ padding: 16 }}>
-        <h2>PersistX Demo</h2>
-        <pre style={{ color: "crimson" }}>{err}</pre>
-      </div>
-    );
-  }
+  const loadSample = (key: string) => {
+    setErr("");
+    setAnalysis(null);
+    setSubmitResult(null);
+    setPayloadText(pretty(samples[key]));
+  };
 
   return (
-    <div style={{ padding: 16, fontFamily: "system-ui, sans-serif", maxWidth: 1100, margin: "0 auto" }}>
-      <h1 style={{ marginBottom: 4 }}>PersistX Demo</h1>
-      <div style={{ opacity: 0.7, marginBottom: 16 }}>
-        Learn: validate → normalize → map (aliases + drop unknown) → submit (adapter.save)
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-        <div>
-          <label>formKey</label>
-          <select value={formKey} onChange={(e) => setFormKey(e.target.value)} style={{ width: "100%" }}>
-            {availableFormKeys.map((k) => (
-              <option key={k} value={k}>
-                {k}
-              </option>
-            ))}
-          </select>
+    <div className="min-h-dvh bg-zinc-50">
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        {/* Header */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="text-3xl font-black tracking-tight text-zinc-900 sm:text-4xl">PersistX Demo</div>
+            <div className="mt-1 text-sm text-zinc-600">
+              Learn the pipeline: <span className="font-semibold text-zinc-900">validate → normalize → map → save</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge>Schema versioning</Badge>
+            <Badge>Aliases / renames</Badge>
+            <Badge>Unknown drop</Badge>
+            <Badge>Adapter boundary</Badge>
+          </div>
         </div>
 
-        <div>
-          <label>schemaVersion</label>
-          <select value={schemaVersion} onChange={(e) => setSchemaVersion(e.target.value as any)} style={{ width: "100%" }}>
-            <option value="latest">latest</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-          </select>
+        {/* Error */}
+        {err ? (
+          <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-800">
+            <div className="font-semibold">Error</div>
+            <pre className="mt-2 whitespace-pre-wrap text-xs">{err}</pre>
+          </div>
+        ) : null}
+
+        {/* Grid */}
+        <div className="grid gap-4 lg:grid-cols-12">
+          {/* Left: Controls */}
+          <div className="lg:col-span-5">
+            <Card
+              title="Step 1 — Configure"
+              subtitle="Pick the formKey + schema version. uid is used by docIdStrategy.id."
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1 text-sm">
+                  <span className="text-xs font-semibold text-zinc-700">formKey</span>
+                  <select
+                    className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-zinc-900/10"
+                    value={formKey}
+                    onChange={(e) => setFormKey(e.target.value)}
+                  >
+                    {availableFormKeys.map((k) => (
+                      <option key={k} value={k}>
+                        {k}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="grid gap-1 text-sm">
+                  <span className="text-xs font-semibold text-zinc-700">schemaVersion</span>
+                  <select
+                    className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-zinc-900/10"
+                    value={schemaVersion}
+                    onChange={(e) => setSchemaVersion(e.target.value as any)}
+                  >
+                    <option value="latest">latest</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="mt-3 grid gap-1 text-sm">
+                <span className="text-xs font-semibold text-zinc-700">context.uid</span>
+                <input
+                  className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-zinc-900/10"
+                  value={uid}
+                  onChange={(e) => setUid(e.target.value)}
+                />
+              </label>
+
+              <div className="mt-3 text-xs text-zinc-500">
+                Tip: For <code className="rounded bg-zinc-100 px-1 py-0.5">petProfile</code>, schema v2 uses canonical{" "}
+                <code className="rounded bg-zinc-100 px-1 py-0.5">type</code> with alias{" "}
+                <code className="rounded bg-zinc-100 px-1 py-0.5">petType</code>.
+              </div>
+            </Card>
+
+            <div className="mt-4">
+              <Card
+                title="Step 2 — Payload"
+                subtitle="Paste JSON. Try legacy keys + unknown keys and see what PersistX does."
+                right={
+                  <select
+                    className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-xs outline-none focus:ring-2 focus:ring-zinc-900/10"
+                    defaultValue="petProfile v1 (legacy + unknown)"
+                    onChange={(e) => loadSample(e.target.value)}
+                  >
+                    {Object.keys(samples).map((k) => (
+                      <option key={k} value={k}>
+                        {k}
+                      </option>
+                    ))}
+                  </select>
+                }
+              >
+                <textarea
+                  className="min-h-[240px] w-full rounded-2xl border border-zinc-200 bg-white p-3 font-mono text-xs leading-5 outline-none focus:ring-2 focus:ring-zinc-900/10"
+                  value={payloadText}
+                  onChange={(e) => setPayloadText(e.target.value)}
+                />
+              </Card>
+            </div>
+
+            <div className="mt-4">
+              <Card title="Step 3 — Actions" subtitle="Analyze shows the pipeline outputs. Submit calls adapter.save().">
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={runAnalyze} disabled={!engine}>
+                    Analyze
+                  </Button>
+                  <Button onClick={runSubmit} variant="secondary" disabled={!engine}>
+                    Submit
+                  </Button>
+                  <Button onClick={clearDb} variant="ghost" disabled={!engine}>
+                    Clear DB
+                  </Button>
+                </div>
+
+                <div className="mt-3 text-xs text-zinc-500">
+                  What to look for:
+                  <ul className="mt-2 list-disc pl-5">
+                    <li>
+                      <span className="font-semibold text-zinc-700">unknownInPayload</span> should include extra keys like{" "}
+                      <code className="rounded bg-zinc-100 px-1 py-0.5">extraFieldShouldDrop</code>.
+                    </li>
+                    <li>
+                      <span className="font-semibold text-zinc-700">mapped</span> should use canonical keys for the chosen version.
+                    </li>
+                    <li>
+                      <span className="font-semibold text-zinc-700">lastAdapterRequest</span> shows the exact data passed to storage.
+                    </li>
+                  </ul>
+                </div>
+              </Card>
+            </div>
+          </div>
+
+          {/* Right: Outputs */}
+          <div className="lg:col-span-7">
+            <div className="grid gap-4">
+              <Card title="Analyze Output" subtitle="validatePayload + normalizePayload + mapPayload">
+                <pre className="max-h-[360px] overflow-auto rounded-2xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs leading-5 text-zinc-100">
+                  {analysis ? pretty(analysis) : "Run Analyze to see validate/normalize/map output."}
+                </pre>
+              </Card>
+
+              <Card title="Submit Output" subtitle="engine.submit → adapter.save + DB snapshot">
+                <pre className="max-h-[360px] overflow-auto rounded-2xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs leading-5 text-zinc-100">
+                  {submitResult ? pretty(submitResult) : "Run Submit to see adapter request + stored DB snapshot."}
+                </pre>
+              </Card>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-sm text-zinc-700">
+              <div className="font-semibold text-zinc-900">Suggested experiments</div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                  <div className="text-xs font-semibold text-zinc-800">Alias mapping</div>
+                  <div className="mt-1 text-xs text-zinc-600">
+                    Use <code className="rounded bg-white px-1 py-0.5">petType</code> while schemaVersion is latest/2 and
+                    confirm it becomes <code className="rounded bg-white px-1 py-0.5">type</code> in <b>mapped</b>.
+                  </div>
+                </div>
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                  <div className="text-xs font-semibold text-zinc-800">Unknown drop</div>
+                  <div className="mt-1 text-xs text-zinc-600">
+                    Keep <code className="rounded bg-white px-1 py-0.5">extraFieldShouldDrop</code> and verify it appears in{" "}
+                    <b>unknownInPayload</b> and disappears from <b>mapped</b>.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label>context.uid (used by docIdStrategy.uid)</label>
-          <input value={uid} onChange={(e) => setUid(e.target.value)} style={{ width: "100%" }} />
+        <div className="mt-6 text-center text-xs text-zinc-500">
+          PersistX is a contract layer — not an ORM. Everything is explicit: versions, aliases, unknown handling, adapter writes.
         </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8, marginBottom: 12 }}>
-        <div>
-          <label>Payload JSON</label>
-          <textarea
-            value={payloadText}
-            onChange={(e) => setPayloadText(e.target.value)}
-            rows={10}
-            style={{ width: "100%", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}
-          />
-        </div>
-
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={runAnalyze}>Analyze (validate + normalize + map)</button>
-          <button onClick={runSubmit}>Submit (engine.submit → adapter.save)</button>
-          <button onClick={clearDb}>Clear DB</button>
-
-          <span style={{ marginLeft: 8, opacity: 0.7 }}>Load sample:</span>
-          <select
-            onChange={(e) => setPayloadText(pretty(samples[e.target.value]))}
-            defaultValue="petProfile v1 (legacy + unknown)"
-          >
-            {Object.keys(samples).map((k) => (
-              <option key={k} value={k}>
-                {k}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {err ? <pre style={{ color: "crimson", margin: 0 }}>{err}</pre> : null}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Analyze Output</h3>
-          <pre style={{ whiteSpace: "pre-wrap" }}>{analysis ? pretty(analysis) : "Run Analyze to see validate/normalize/map."}</pre>
-        </div>
-
-        <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Submit Output</h3>
-          <pre style={{ whiteSpace: "pre-wrap" }}>
-            {submitResult ? pretty(submitResult) : "Run Submit to see adapter request + stored DB snapshot."}
-          </pre>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 16, opacity: 0.7 }}>
-        Tip: Try payload with <code>petType</code> while schemaVersion is latest/v2. You should see it mapped into canonical{" "}
-        <code>type</code>. Unknown keys should appear in <code>unknownInPayload</code> and disappear from <code>mapped</code>.
       </div>
     </div>
   );
