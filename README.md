@@ -35,6 +35,28 @@ No magic. No silent data loss.
 
 ---
 
+## Try the Demo (Recommended)
+
+The fastest way to understand PersistX is to run the interactive demo.
+
+```bash
+yarn install
+yarn workspace demo-vite dev
+```
+
+What the demo shows:
+
+* **Step 1 — Configure**: pick `formKey`, schema version, and `context.uid`
+* **Step 2 — Payload**: paste legacy or modern JSON payloads
+* **Step 3 — Analyze**: see validation, normalization, alias mapping, and unknown-field detection
+* **Step 4 — Submit**: inspect the exact data sent to `adapter.save()` and the stored DB snapshot
+
+The demo mirrors the internal pipeline:
+
+> validate → normalize → map → save
+
+---
+
 ## Core Concepts
 
 ### 1. Form Definitions
@@ -93,9 +115,9 @@ PersistX will:
 1. resolve schema version
 2. validate payload
 3. normalize values
-4. map fields
+4. map fields (apply aliases, drop unknowns)
 5. resolve document ID
-6. call adapter.save()
+6. call `adapter.save()`
 
 ---
 
@@ -115,7 +137,7 @@ Creates:
 definitions/schema.json
 ```
 
-Single-file schema (recommended).
+A single-file schema (recommended).
 
 ---
 
