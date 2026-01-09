@@ -1,23 +1,14 @@
 #!/usr/bin/env node
 
 // packages/cli/src/index.ts
-import fs from "node:fs";
-import path from "node:path";
 import { runDiff } from "./diff.js";
-
-type DiffOpts = {
-    file: string;
-    apply: boolean;
-    yes: boolean;
-    form?: string;
-    from?: number;
-    to?: number;
-};
+import { runInit } from "./init.js";
+import { runMigrate } from "./migrate.js";
 
 async function main() {
     const args = process.argv.slice(2);
-    const cmd = args[0];
 
+    const cmd = args[0];
     if (!cmd || cmd === "-h" || cmd === "--help") {
         printHelp();
         process.exit(0);
@@ -35,6 +26,12 @@ async function main() {
         return;
     }
 
+    if (cmd === "migrate") {
+        const opts = parseMigrateArgs(args.slice(1));
+        await runMigrate(opts);
+        return;
+    }
+
     console.error(`Unknown command: ${cmd}\n`);
     printHelp();
     process.exit(1);
@@ -47,49 +44,43 @@ persistx (PersistX CLI)
 Usage:
   persistx init [--file <schemaFile>] [--force]
   persistx diff [--file <schemaFile>] [--apply] [--yes] [--form <formKey>] [--from <v>] [--to <v>]
+  persistx migrate [--file <schemaFile>] --form <formKey> [--from <v>] [--to <v>] --input <jsonFile> [--out <jsonFile>] [--apply]
 
 Commands:
-  init    Create a single schema.json (Option A) at definitions/schema.json
-  diff    Compare schema versions and suggest "aliases" mappings (field renames)
+  init     Create a single schema.json (Option A) at definitions/schema.json
+  diff     Suggest "aliases" mappings (field renames) between versions
+  migrate  Transform payload JSON from one version to another (preview or write)
 
 Options:
   --file   Schema file path (default: ./definitions/schema.json)
-  --apply  Write aliases back into the "to" version definition
-  --yes    Auto-accept suggested mappings (non-interactive)
+  --apply  Write changes (diff: updates schema; migrate: writes migrated output)
+  --yes    Auto-accept suggestions (diff only)
   --form   Only run for a specific formKey
-  --from   Compare from version (optional)
-  --to     Compare to version (optional)
+  --from   Compare/migrate from version (optional)
+  --to     Compare/migrate to version (optional)
   --force  Overwrite schema file (init only)
+
+Migrate options:
+  --input  Input JSON file containing payload or array of payloads
+  --out    Output JSON file (default: <input>.migrated.json)
 
 Examples:
   persistx init
-  persistx init --file ./definitions/schema.json
-  persistx diff
   persistx diff --file ./definitions/schema.json --apply
-  persistx diff --form profile --apply
-  persistx diff --from 1 --to 2 --apply
+  persistx migrate --form petProfile --input ./payload.json --apply
 `);
-}
-
-function parseCommonFileArg(args: string[]) {
-    let file = "./definitions/schema.json";
-    for (let i = 0; i < args.length; i++) {
-        const a = args[i];
-        if (a === "--file") file = String(args[++i] ?? file);
-    }
-    return file;
 }
 
 function parseInitArgs(args: string[]) {
     const opts: { file: string; force: boolean } = {
-        file: parseCommonFileArg(args),
+        file: "./definitions/schema.json",
         force: false
     };
 
     for (let i = 0; i < args.length; i++) {
         const a = args[i];
-        if (a === "--file") { i++; continue; }
-        if (a === "--force") opts.force = true;
+        if (a === "--file") opts.file = String(args[++i] ?? opts.file);
+        else if (a === "--force") opts.force = true;
         else if (a === "-h" || a === "--help") {
             printHelp();
             process.exit(0);
@@ -97,12 +88,20 @@ function parseInitArgs(args: string[]) {
             console.warn(`Ignoring unknown arg: ${a}`);
         }
     }
+
     return opts;
 }
 
-function parseDiffArgs(args: string[]): DiffOpts {
-    const opts: DiffOpts = {
-        file: parseCommonFileArg(args),
+function parseDiffArgs(args: string[]) {
+    const opts: {
+        file: string;
+        apply: boolean;
+        yes: boolean;
+        form?: string;
+        from?: number;
+        to?: number;
+    } = {
+        file: "./definitions/schema.json",
         apply: false,
         yes: false
     };
@@ -110,7 +109,7 @@ function parseDiffArgs(args: string[]): DiffOpts {
     for (let i = 0; i < args.length; i++) {
         const a = args[i];
 
-        if (a === "--file") { opts.file = String(args[++i] ?? opts.file); }
+        if (a === "--file") opts.file = String(args[++i] ?? opts.file);
         else if (a === "--apply") opts.apply = true;
         else if (a === "--yes") opts.yes = true;
         else if (a === "--form") opts.form = String(args[++i] ?? "");
@@ -134,22 +133,49 @@ function parseDiffArgs(args: string[]): DiffOpts {
     return opts;
 }
 
-async function runInit(opts: { file: string; force: boolean }) {
-    const fileAbs = path.resolve(process.cwd(), opts.file);
-    const dir = path.dirname(fileAbs);
+function parseMigrateArgs(args: string[]) {
+    const opts: {
+        file: string;
+        form?: string;
+        from?: number;
+        to?: number;
+        input?: string;
+        out?: string;
+        apply: boolean;
+    } = {
+        file: "./definitions/schema.json",
+        apply: false
+    };
 
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    for (let i = 0; i < args.length; i++) {
+        const a = args[i];
 
-    if (fs.existsSync(fileAbs) && !opts.force) {
-        console.log(`Schema file already exists: ${fileAbs}`);
-        console.log(`Use --force to overwrite.`);
-        return;
+        if (a === "--file") opts.file = String(args[++i] ?? opts.file);
+        else if (a === "--form") opts.form = String(args[++i] ?? "");
+        else if (a === "--from") opts.from = Number(args[++i]);
+        else if (a === "--to") opts.to = Number(args[++i]);
+        else if (a === "--input") opts.input = String(args[++i] ?? "");
+        else if (a === "--out") opts.out = String(args[++i] ?? "");
+        else if (a === "--apply") opts.apply = true;
+        else if (a === "-h" || a === "--help") {
+            printHelp();
+            process.exit(0);
+        } else {
+            console.warn(`Ignoring unknown arg: ${a}`);
+        }
     }
 
-    const schema = { persistx: 1, definitions: [] as any[] };
-    fs.writeFileSync(fileAbs, JSON.stringify(schema, null, 2) + "\n", "utf-8");
+    if (!opts.form) throw new Error(`migrate requires --form <formKey>`);
+    if (!opts.input) throw new Error(`migrate requires --input <jsonFile>`);
 
-    console.log(`✅ created: ${fileAbs}`);
+    if (opts.from !== undefined && (!Number.isInteger(opts.from) || opts.from < 1)) {
+        throw new Error(`--from must be an integer >= 1`);
+    }
+    if (opts.to !== undefined && (!Number.isInteger(opts.to) || opts.to < 1)) {
+        throw new Error(`--to must be an integer >= 1`);
+    }
+
+    return opts;
 }
 
 main().catch((e) => {
