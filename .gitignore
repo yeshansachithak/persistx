@@ -131,3 +131,5 @@ dist
 .yarn/install-state.gz
 .pnp.*
 package-lock.json
+.yarn/releases/yarn-4.12.0.cjs
+yarn.lock
