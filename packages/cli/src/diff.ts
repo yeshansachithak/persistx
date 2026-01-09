@@ -1,9 +1,10 @@
 // packages/cli/src/diff.ts
+import type { PersistxFieldDefinition, PersistxFormDefinition } from "@persistx/core";
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 
-import type { PersistxFormDefinition, PersistxFieldDefinition } from "@persistx/core";
+
 
 type LoadedDef = {
     filePath: string;

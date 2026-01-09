@@ -155,6 +155,19 @@ function parseDiffArgs(args: string[]) {
     return opts;
 }
 
+type MigrateArgs = {
+    file: string;
+    cwd?: string;
+    form: string;
+    from?: number;
+    to?: number;
+    input: string;
+    out?: string;
+    apply: boolean;
+    keepUnknown: boolean;
+    report: boolean;
+};
+
 function parseMigrateArgs(args: string[]) {
     const opts: {
         file: string;
@@ -195,6 +208,12 @@ function parseMigrateArgs(args: string[]) {
         }
     }
 
+    const form = opts.form;
+    const input = opts.input;
+
+    if (!form) throw new Error(`migrate requires --form <formKey>`);
+    if (!input) throw new Error(`migrate requires --input <jsonFile>`);
+
     if (!opts.form) throw new Error(`migrate requires --form <formKey>`);
     if (!opts.input) throw new Error(`migrate requires --input <jsonFile>`);
 
@@ -205,7 +224,11 @@ function parseMigrateArgs(args: string[]) {
         throw new Error(`--to must be an integer >= 1`);
     }
 
-    return opts;
+    return {
+        ...opts,
+        form,
+        input
+    };
 }
 
 main().catch((e) => {

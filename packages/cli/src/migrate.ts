@@ -1,7 +1,7 @@
 // packages/cli/src/migrate.ts
+import type { PersistxFieldDefinition, PersistxFormDefinition } from "@persistx/core";
 import fs from "node:fs";
 import path from "node:path";
-import type { PersistxFormDefinition, PersistxFieldDefinition } from "@persistx/core";
 
 type SchemaFile = { raw: any; definitions: any[] };
 

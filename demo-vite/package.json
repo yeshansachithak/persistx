@@ -13,7 +13,7 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
-    "@persistx/core": "^0.1.0"
+    "@persistx/core": "workspace:*"
   },
   "overrides": {
     "esbuild": "npm:esbuild-wasm@latest"

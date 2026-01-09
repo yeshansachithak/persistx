@@ -6,7 +6,9 @@
         "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo",
         "outDir": "dist",
         "rootDir": "src",
-        "declaration": true
+        "declaration": true,
+        "noEmit": false,
+        "emitDeclarationOnly": false
     },
     "include": [
         "src"

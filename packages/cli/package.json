@@ -12,7 +12,7 @@
         "clean": "rm -rf dist node_modules/.cache"
     },
     "dependencies": {
-        "@persistx/core": "0.1.0"
+        "@persistx/core": "workspace:*"
     },
     "devDependencies": {
         "tsx": "^4.19.0",
