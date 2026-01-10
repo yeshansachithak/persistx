@@ -1,0 +1,2 @@
+// src/persistx/demoAdapter.ts
+
