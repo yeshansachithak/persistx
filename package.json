@@ -11,6 +11,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "fresh-start": "git checkout --orphan new-branch && git add -A && git commit -m 'Initial commit'",
     "build:order": "yarn workspace @persistx/core build && yarn workspace @persistx/cli build && yarn workspace @persistx/adapter-firestore build && yarn workspace @persistx/validator-zod build && yarn workspace demo-vite build",
     "build": "yarn workspaces foreach -Apt run build",
     "dev": "yarn workspaces foreach -Apt run dev",
