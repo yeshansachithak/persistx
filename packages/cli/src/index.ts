@@ -71,10 +71,10 @@ Migrate options:
 
 Examples:
   persistx init
-  persistx diff --file ./demo-vite/public/schema.json
-  persistx diff --file ./demo-vite/public/schema.json --apply
-  persistx diff --file ./demo-vite/public/schema.json --yes
-  persistx migrate --file ./demo-vite/public/schema.json --form petProfile --from 1 --to 2 --input ./payload.json --apply
+  persistx diff --file ./demo-vite-app/public/schema.json
+  persistx diff --file ./demo-vite-app/public/schema.json --apply
+  persistx diff --file ./demo-vite-app/public/schema.json --yes
+  persistx migrate --file ./demo-vite-app/public/schema.json --form petProfile --from 1 --to 2 --input ./payload.json --apply
 `);
 }
 

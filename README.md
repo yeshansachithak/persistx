@@ -41,7 +41,7 @@ The fastest way to understand PersistX is to run the interactive demo.
 
 ```bash
 yarn install
-yarn workspace demo-vite dev
+yarn workspace demo-vite-app dev
 ```
 
 What the demo shows:
