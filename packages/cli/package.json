@@ -1,0 +1,21 @@
+{
+    "name": "@persistx/cli",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "bin": {
+        "persistx": "dist/index.js"
+    },
+    "scripts": {
+        "build": "tsc -b && node ./scripts/fix-shebang.mjs",
+        "dev": "tsx src/index.ts",
+        "clean": "rm -rf dist node_modules/.cache"
+    },
+    "dependencies": {
+        "@persistx/core": "workspace:*"
+    },
+    "devDependencies": {
+        "tsx": "^4.19.0",
+        "typescript": "^5.5.0"
+    }
+}

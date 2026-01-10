@@ -1,0 +1,313 @@
+# =================================
+# macOS Specific
+# =================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+*.DS_Store?
+*/.DS_Store?
+
+# =================================
+# Dependencies & Package Managers
+# =================================
+node_modules/
+.npm
+.npmrc
+.npminstall
+.pnpm-store/
+.yarn/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.yarn/sdks
+.yarn/versions
+.yarn/unplugged
+.yarn/patches/.yarn-state.yml
+.pnp.*
+.pnp
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.yarnrc.yml
+.yarn/install-state.gz
+package-lock.json  # You're using yarn, so ignore npm lockfile
+
+# =================================
+# Build Outputs
+# =================================
+dist/
+dist-ssr/
+build/
+lib/              # If you have compiled output
+esm/              # ES module builds
+cjs/              # CommonJS builds
+types/            # TypeScript declaration files (if generated separately)
+*.tsbuildinfo
+*.d.ts.map
+*.js.map
+*.css.map
+*.min.js
+*.min.css
+*.bundle.js
+coverage/
+.nyc_output/
+.parcel-cache
+.cache/
+.next/
+.nuxt/
+.nuxt-prod
+.gatsby/
+.gatsby-context.js
+.vuepress/dist
+.vitepress/dist
+out/
+.output/
+
+# =================================
+# Environment & Configuration
+# =================================
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging.local
+.firebase/
+.firebaserc
+firebase.json
+*.env
+
+# =================================
+# Logs & Diagnostics
+# =================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+*.pid
+*.seed
+*.pid.lock
+logs/
+
+# =================================
+# Testing & Coverage
+# =================================
+coverage/
+.nyc_output/
+jest-cache/
+.vitest/
+.ava/
+.mocha/
+.nycrc
+karma.conf.js
+jest.config.js
+vitest.config.*
+cypress/videos/
+cypress/screenshots/
+cypress/fixtures/example.json
+__snapshots__/
+*.tap
+*.trx
+TestResult.xml
+
+# =================================
+# IDEs & Editors
+# =================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+.idea/
+*.swp
+*.swo
+*~
+.ropeproject
+.project
+.settings
+*.sublime-workspace
+*.sublime-project
+*.komodoproject
+.tmproj
+*.tmproj
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.classpath
+*.factorypath
+*.c9/
+*.history
+.history/
+.session
+.stfolder
+*.code-workspace
+
+# =================================
+# Operating System
+# =================================
+[Tt]humbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# =================================
+# Package Publishing
+# =================================
+*.tgz
+*.tar.gz
+*.zip
+*.patch
+.publish/
+.release/
+
+# =================================
+# Vite / Frontend Specific
+# =================================
+*.local
+.cache/
+.temp/
+.ssr/
+.vite/
+.vitepress/cache
+*.vue.ts
+*.vue.js
+
+# =================================
+# TypeScript
+# =================================
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# =================================
+# Tailwind CSS
+# =================================
+*.css.map
+tailwind.config.ts.timestamp-*
+tailwind.config.js.timestamp-*
+
+# =================================
+# Temporary & Development Files
+# =================================
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+*.~undo-tree~
+*.un~
+.swp
+.swo
+*~
+.session
+*.pid
+*.seed
+*.pid.lock
+
+# =================================
+# Misc
+# =================================
+.dockerignore
+.dccache
+.sass-cache/
+.stylelintcache
+.eslintcache
+*.css.d.ts
+*.scss.d.ts
+*.sass.d.ts
+*.less.d.ts
+.tern-port
+.husky/
+.huskyrc
+.lintstagedrc
+.commitlintrc
+.husky/_/
+.husky/*/
+.husky/_
+
+# =================================
+# CI/CD & Deployment
+# =================================
+.circleci/
+.travis.yml
+.gitlab-ci.yml
+.azure-pipelines/
+.github/workflows/*.yml
+!.github/workflows/example.yml
+.gitlab/
+bitbucket-pipelines.yml
+.codesandbox/
+.netlify/
+.vercel/
+.firebase/
+
+# =================================
+# Documentation
+# =================================
+_site/
+_sass/
+.jekyll-metadata
+.sass-cache/
+.jekyll-cache/
+docs/.vuepress/dist
+docs/.vitepress/dist
+storybook-static/
+chromatic/
+
+# =================================
+# Security
+# =================================
+secrets.yml
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.pfx
+*.gpg
+*.asc
+id_rsa
+id_dsa
+*.enc
+.env.*.enc
+
+# =================================
+# Performance & Profiling
+# =================================
+.flamegraph/
+.profile
+*.cpuprofile
+*.heapsnapshot
+*.heapprofile
+*.profile
+.heapsnapshot
+*.heaptimeline
+.heaptimeline

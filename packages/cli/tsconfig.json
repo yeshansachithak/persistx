@@ -1,0 +1,21 @@
+{
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "composite": true,
+        "incremental": true,
+        "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo",
+        "outDir": "dist",
+        "rootDir": "src",
+        "declaration": true,
+        "noEmit": false,
+        "emitDeclarationOnly": false
+    },
+    "include": [
+        "src"
+    ],
+    "references": [
+        {
+            "path": "../core"
+        }
+    ]
+}
