@@ -12,6 +12,35 @@ import { createMemoryAdapter } from "./persistx-demo-adapter";
 
 type SchemaFile = { persistx: number; definitions: any[] };
 
+type SchemaIndex = {
+    formKeys: string[];
+    versionsByForm: Record<string, number[]>;
+};
+
+function buildSchemaIndex(definitions: any[]): SchemaIndex {
+    const byForm = new Map<string, number[]>();
+
+    for (const d of definitions ?? []) {
+        const fk = d?.formKey;
+        const v = d?.version;
+        if (typeof fk !== "string" || !fk) continue;
+        if (!Number.isInteger(v)) continue;
+
+        const arr = byForm.get(fk) ?? [];
+        arr.push(v);
+        byForm.set(fk, arr);
+    }
+
+    const formKeys = Array.from(byForm.keys()).sort();
+    const versionsByForm: Record<string, number[]> = {};
+
+    for (const fk of formKeys) {
+        versionsByForm[fk] = (byForm.get(fk) ?? []).sort((a, b) => a - b);
+    }
+
+    return { formKeys, versionsByForm };
+}
+
 export async function createDemoPersistx() {
     const res = await fetch("/schema.json");
     if (!res.ok) throw new Error("Missing /schema.json in public/");
@@ -20,6 +49,8 @@ export async function createDemoPersistx() {
     if (!schema?.definitions || !Array.isArray(schema.definitions)) {
         throw new Error("Invalid schema.json format. Expected { definitions: [...] }");
     }
+
+    const schemaIndex = buildSchemaIndex(schema.definitions);
 
     const registry = createInMemoryRegistry(schema.definitions);
     const adapter: DemoAdapter = createMemoryAdapter();
@@ -56,5 +87,5 @@ export async function createDemoPersistx() {
         return { def, version, validation, normalized, mapped, unknownInPayload };
     }
 
-    return { persistx, registry, adapter, analyze };
+    return { persistx, registry, adapter, analyze, schemaIndex };
 }
