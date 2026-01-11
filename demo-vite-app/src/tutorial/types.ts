@@ -102,10 +102,19 @@ export type Step = {
     actions: StepAction[];
 
     /**
-     * Optional step-level expectations. The runner can use this to show a green/red
-     * checkpoint or display "You should see..." hints.
+     * Optional step-level expectations.
      */
     expect?: StepExpectation;
+
+    /**
+     * --- UI convenience (optional) ---
+     * Some panels read uiFields directly from the current step.
+     * We keep this optional so tutorials can remain data-driven.
+     *
+     * If omitted, the runner should use the tutorial form's uiFields,
+     * possibly patched by enter.uiPatches.
+     */
+    uiFields?: UiField[];
 };
 
 export type StepEnter = {
@@ -128,13 +137,11 @@ export type StepEnter = {
 
     /**
      * Set the "payload mode" on entry.
-     * - "form": payload is built from UI inputs (recommended for the tutorial)
-     * - "json": payload is edited as JSON text in the UI
      */
     payloadMode?: PayloadMode;
 
     /**
-     * If payloadMode is "json", set the initial JSON text (pretty-printed).
+     * If payloadMode is "json"/"raw", set initial JSON payload object (runner will stringify).
      * If payloadMode is "form", set default input values for the form.
      */
     initialPayload?: Record<string, unknown>;
@@ -158,6 +165,12 @@ export type StepLock = {
     payloadMode?: boolean;
     ui?: boolean;
     context?: boolean;
+
+    /**
+     * Optional: lock specific UI field keys (FormPanel expects this).
+     * Example: ["petName"]
+     */
+    fields?: string[];
 };
 
 export type StepAction =
@@ -182,7 +195,7 @@ export type ActionBase = {
     help?: string;
 
     /**
-     * Optional "danger" styling hint.
+     * Optional styling hint.
      */
     tone?: "primary" | "secondary" | "ghost" | "danger";
 };
@@ -202,19 +215,18 @@ export type ActionSubmit = ActionBase & {
     kind: "submit";
 
     /**
-     * If set, temporarily override the schema version used for submission.
+     * If set, temporarily override the schema used for submission.
      * Most steps will not need this (they use the active schemaRef).
      */
     schemaRef?: SchemaRef;
 
     /**
      * What we expect to happen when user clicks Submit.
-     * Runner can display checkpoints.
      */
     expect?: "success" | "error";
 
     /**
-     * If expect=error, we can match message substring to guide the learner.
+     * If expect=error, we can match message substring.
      */
     expectedErrorContains?: string;
 };
@@ -251,7 +263,6 @@ export type ActionCopyCli = ActionBase & {
     kind: "copyCli";
     /**
      * A shell command shown & copied to clipboard.
-     * Example: `persistx diff --file schema.json --apply`
      */
     command: string;
 };
@@ -275,14 +286,14 @@ export type StepExpectation = {
     shouldSee?: string[];
 
     /**
-     * Optional "checklist" values. The runner can display these as hints.
+     * Optional "checklist" values.
      */
     checks?: Record<string, string>;
 };
 
 /**
  * SchemaRef identifies which schema snapshot is active in the demo.
- * We use snapshot files (recommended) rather than mutating schema.json.
+ * We use snapshot files rather than mutating schema.json.
  */
 export type SchemaRef =
     | { kind: "snapshot"; file: string; versionLabel?: string }
@@ -290,10 +301,13 @@ export type SchemaRef =
 
 /**
  * The mode used for user payload input.
- * "form" is the main tutorial experience.
- * "json" is useful for advanced learners.
+ * - "form": payload is built from UI inputs (recommended)
+ * - "json": payload is edited as JSON text
+ * - "raw": alias for older UI code that uses "raw"
+ *
+ * NOTE: "raw" and "json" mean the same thing in Phase 1.
  */
-export type PayloadMode = "form" | "json";
+export type PayloadMode = "form" | "json" | "raw";
 
 /**
  * UI field definition for the rendered form panel.
@@ -309,7 +323,7 @@ export type UiField = {
     disabled?: boolean;
 
     /**
-     * If true, this field is hidden but still may be included in payload.
+     * If true, hidden but still may be included in payload.
      */
     hidden?: boolean;
 };
@@ -349,15 +363,10 @@ export type UiPatch =
     };
 
 /**
- * Context passed to PersistX submit/create/update/upsert.
- * docIdStrategy.uid depends on uid.
+ * Context passed to PersistX calls.
  */
 export type PersistxDemoContext = {
     uid?: string;
-
-    /**
-     * Future: other context values if you add them to PersistX hooks.
-     */
     nowISO?: string;
 };
 
@@ -375,13 +384,15 @@ export type AnalyzeOutput = {
     definition?: unknown;
 };
 
-export type SubmitOutput = {
-    ok: true;
-    result: unknown;
-    lastAdapterRequest?: unknown;
-    db?: unknown;
-} | {
-    ok: false;
-    error: string;
-    details?: unknown;
-};
+export type SubmitOutput =
+    | {
+        ok: true;
+        result: unknown;
+        lastAdapterRequest?: unknown;
+        db?: unknown;
+    }
+    | {
+        ok: false;
+        error: string;
+        details?: unknown;
+    };
