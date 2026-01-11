@@ -1,6 +1,6 @@
 // src/ui/panels/ResultPanel.tsx
 
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { useTutorial } from "../../tutorial/TutorialContext";
 import Card from "../common/Card";
 import CodeBlock from "../common/CodeBlock";
