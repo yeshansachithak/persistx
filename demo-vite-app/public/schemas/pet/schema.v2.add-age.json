@@ -1,2 +1,40 @@
-// public/schemas/pet/schema.v2.add-age.json
-
+{
+    "persistx": 1,
+    "definitions": [
+        {
+            "formKey": "petProfile",
+            "version": 2,
+            "collection": "petProfiles",
+            "docIdStrategy": {
+                "kind": "uid"
+            },
+            "writeMode": "upsert",
+            "allowUnknownFields": false,
+            "fields": [
+                {
+                    "key": "petName",
+                    "type": "string",
+                    "rules": [
+                        {
+                            "kind": "required"
+                        }
+                    ]
+                },
+                {
+                    "key": "petType",
+                    "type": "string",
+                    "rules": [
+                        {
+                            "kind": "required"
+                        }
+                    ]
+                },
+                {
+                    "key": "age",
+                    "type": "number",
+                    "nullable": true
+                }
+            ]
+        }
+    ]
+}

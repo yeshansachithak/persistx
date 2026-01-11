@@ -1,2 +1,30 @@
-// public/schemas/index.json
-
+{
+    "persistxDemoSchemas": 1,
+    "tutorials": [
+        {
+            "id": "pet",
+            "title": "Pet Form",
+            "baseUrl": "/schemas/pet",
+            "schemas": [
+                {
+                    "id": "pet-v1",
+                    "label": "v1",
+                    "file": "schema.v1.json",
+                    "description": "Baseline schema: petName + petType"
+                },
+                {
+                    "id": "pet-v2",
+                    "label": "v2",
+                    "file": "schema.v2.add-age.json",
+                    "description": "Adds a new field: age"
+                },
+                {
+                    "id": "pet-v3",
+                    "label": "v3",
+                    "file": "schema.v3.rename-with-alias.json",
+                    "description": "Rename petType → type, keep compatibility with aliases"
+                }
+            ]
+        }
+    ]
+}

@@ -1,2 +1,35 @@
-// public/schemas/pet/schema.v1.json
-
+{
+    "persistx": 1,
+    "definitions": [
+        {
+            "formKey": "petProfile",
+            "version": 1,
+            "collection": "petProfiles",
+            "docIdStrategy": {
+                "kind": "uid"
+            },
+            "writeMode": "upsert",
+            "allowUnknownFields": false,
+            "fields": [
+                {
+                    "key": "petName",
+                    "type": "string",
+                    "rules": [
+                        {
+                            "kind": "required"
+                        }
+                    ]
+                },
+                {
+                    "key": "petType",
+                    "type": "string",
+                    "rules": [
+                        {
+                            "kind": "required"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

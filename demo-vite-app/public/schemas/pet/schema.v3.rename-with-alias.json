@@ -1,2 +1,43 @@
-// public/schemas/pet/schema.v3.rename-with-alias.json
-
+{
+    "persistx": 1,
+    "definitions": [
+        {
+            "formKey": "petProfile",
+            "version": 3,
+            "collection": "petProfiles",
+            "docIdStrategy": {
+                "kind": "uid"
+            },
+            "writeMode": "upsert",
+            "allowUnknownFields": false,
+            "fields": [
+                {
+                    "key": "petName",
+                    "type": "string",
+                    "rules": [
+                        {
+                            "kind": "required"
+                        }
+                    ]
+                },
+                {
+                    "key": "type",
+                    "type": "string",
+                    "rules": [
+                        {
+                            "kind": "required"
+                        }
+                    ],
+                    "aliases": [
+                        "petType"
+                    ]
+                },
+                {
+                    "key": "age",
+                    "type": "number",
+                    "nullable": true
+                }
+            ]
+        }
+    ]
+}
