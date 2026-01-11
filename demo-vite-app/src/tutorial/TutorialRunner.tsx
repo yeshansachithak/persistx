@@ -1,7 +1,7 @@
 // src/tutorial/TutorialRunner.tsx
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import type { Tutorial, StepAction } from "./types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Tutorial, StepAction, Step } from "./types";
 import { TutorialContext } from "./TutorialContext";
 import { createTutorialEngine, type TutorialEngineState } from "./engine";
 
@@ -41,7 +41,11 @@ type TutorialRunnerProps = {
      * Schema loader for snapshot files. Should load from tutorial.schemaBaseUrl.
      * We keep it outside the engine so it can be swapped/tested.
      */
-    loadSchema: (schemaRef: { kind: "snapshot"; file: string; versionLabel?: string } | { kind: "version"; version: number; versionLabel?: string }) => Promise<any>;
+    loadSchema: (
+        schemaRef:
+            | { kind: "snapshot"; file: string; versionLabel?: string }
+            | { kind: "version"; version: number; versionLabel?: string }
+    ) => Promise<any>;
 
     /**
      * Render-prop: children render the actual UI (panels/layout).
@@ -55,14 +59,13 @@ export default function TutorialRunner(props: TutorialRunnerProps) {
 
     // ---------- bootstrapping defaults ----------
     const defaultFormKey = useMemo(() => {
-        // pick first form in tutorial.forms
         const keys = Object.keys(tutorial.forms);
         if (!keys.length) throw new Error("Tutorial has no forms");
         return keys[0]!;
     }, [tutorial]);
 
     const defaultSchemaRef = useMemo(() => {
-        // use v1 snapshot by convention; tutorial data should set schemaRef per step anyway
+        // Convention only; step.enter should set schemaRef explicitly.
         return { kind: "snapshot" as const, file: "schema.v1.json", versionLabel: "v1" };
     }, []);
 
@@ -74,7 +77,6 @@ export default function TutorialRunner(props: TutorialRunnerProps) {
     const engineRef = useRef<ReturnType<typeof createTutorialEngine> | null>(null);
     const [state, setState] = useState<TutorialEngineState | null>(null);
 
-    // Create engine once per tutorial/runtime change
     useEffect(() => {
         const engine = createTutorialEngine({
             tutorial,
@@ -90,8 +92,8 @@ export default function TutorialRunner(props: TutorialRunnerProps) {
 
         engineRef.current = engine;
 
-        // Go to first step and apply step.enter
         (async () => {
+            // Apply step.enter for the first step immediately (also ensures schema is loaded).
             const s0 = await engine.goto(engine.initialState, 0, 0);
             setState(s0);
         })().catch((e: any) => {
@@ -108,7 +110,24 @@ export default function TutorialRunner(props: TutorialRunnerProps) {
 
         const engine = engineRef.current!;
         const story = tutorial.stories[state.currentStoryIndex]!;
-        const step = story.steps[state.currentStepIndex]!;
+        const step0 = story.steps[state.currentStepIndex]!;
+
+        // IMPORTANT:
+        // Some UI components were written expecting:
+        //  - step.uiFields (but Step type is data-only and does not include uiFields)
+        //  - step.enter.lock.fields (not part of StepLock in early drafts)
+        // We provide a "UI-friendly" step object derived from state + step0.
+        const step: Step & { uiFields?: any } = {
+            ...(step0 as any),
+            uiFields: state.uiFields,
+            enter: {
+                ...(step0.enter as any),
+                lock: {
+                    ...((step0.enter as any)?.lock ?? {}),
+                    fields: ((step0.enter as any)?.lock?.fields ?? []) as string[]
+                }
+            }
+        };
 
         const isFirstStep = state.currentStoryIndex === 0 && state.currentStepIndex === 0;
         const isLastStep =
@@ -125,16 +144,32 @@ export default function TutorialRunner(props: TutorialRunnerProps) {
                 const prev = await engine.back(state);
                 setState(prev);
             },
+
+            // StepNavigator dot navigation (within current story)
+            goToStep: async (stepIndex: number) => {
+                const bounded = Math.max(0, Math.min(stepIndex, story.steps.length - 1));
+                const next = await engine.goto(state, state.currentStoryIndex, bounded);
+                setState(next);
+            },
+
             setSchema: async (schemaRef: any) => {
                 const next = await engine.setSchema(state, schemaRef);
                 setState(next);
             },
-            applyUiPatch: async (patch: any) => {
+            applyUiPatch: (patch: any) => {
                 const next = engine.applyUiPatch(state, patch);
                 setState(next);
             },
             setFormValues: (values: Record<string, unknown>) => {
                 const next = engine.setFormValues(state, values);
+                setState(next);
+            },
+            // Used by FormPanel
+            updateFormValue: (key: string, value: unknown) => {
+                const nextValues = { ...(state.formValues ?? {}) };
+                if (value === undefined) delete nextValues[key];
+                else nextValues[key] = value;
+                const next = engine.setFormValues(state, nextValues);
                 setState(next);
             },
             setPayloadJson: (text: string) => {
@@ -162,44 +197,55 @@ export default function TutorialRunner(props: TutorialRunnerProps) {
                 setState(next);
             },
             resetStep: async () => {
-                // Re-apply current step.enter deterministically by re-goto same indices
                 const next = await engine.goto(state, state.currentStoryIndex, state.currentStepIndex);
                 setState(next);
             }
         };
 
+        // ---- Context state (plus compatibility aliases used by UI panels) ----
+        const compatState = {
+            tutorial,
+
+            currentStoryIndex: state.currentStoryIndex,
+            currentStepIndex: state.currentStepIndex,
+
+            // canonical
+            formKey: state.formKey,
+            schemaRef: state.schemaRef,
+            payloadMode: state.payloadMode,
+            uiFields: state.uiFields,
+            formValues: state.formValues,
+            payloadJsonText: state.payloadJsonText,
+            context: state.context,
+
+            analyzeOutput: state.analyzeOutput,
+            submitOutput: state.submitOutput,
+
+            isBusy: state.isBusy,
+            lastError: state.lastError,
+
+            // compatibility aliases expected by existing panels
+            activeFormKey: state.formKey,
+            rawPayloadText: state.payloadJsonText, // CodePanel used to read rawPayloadText
+            schemaSnapshot: (state as any).schemaSnapshot, // SchemaPanel expects this
+            lastAnalysis: state.analyzeOutput, // ResultPanel expects lastAnalysis
+            lastSubmitResult: state.submitOutput // ResultPanel expects lastSubmitResult
+        };
+
         return {
-            state: {
-                // shape expected by TutorialContext.ts
-                tutorial,
-                currentStoryIndex: state.currentStoryIndex,
-                currentStepIndex: state.currentStepIndex,
-                formKey: state.formKey,
-                schemaRef: state.schemaRef,
-                payloadMode: state.payloadMode,
-                uiFields: state.uiFields,
-                formValues: state.formValues,
-                payloadJsonText: state.payloadJsonText,
-                context: state.context,
-                analyzeOutput: state.analyzeOutput,
-                submitOutput: state.submitOutput,
-                isBusy: state.isBusy,
-                lastError: state.lastError
-            },
-            actions,
+            state: compatState as any,
+            actions: actions as any,
             story,
             step,
             isFirstStep,
-            isLastStep
+            isLastStep,
+            // convenience alias so FormPanel can destructure updateFormValue directly
+            updateFormValue: actions.updateFormValue
         };
     }, [state, tutorial]);
 
     if (!ctxValue) {
-        return (
-            <div className="p-6 text-sm text-zinc-700">
-                Loading tutorial…
-            </div>
-        );
+        return <div className="p-6 text-sm text-zinc-700">Loading tutorial…</div>;
     }
 
     return <TutorialContext.Provider value={ctxValue}>{children}</TutorialContext.Provider>;
@@ -208,12 +254,8 @@ export default function TutorialRunner(props: TutorialRunnerProps) {
 /**
  * Optional helper: execute a StepAction from UI.
  * Panels/controls can either call actions directly, or use this dispatcher.
- * We keep it here for convenience, but it's not required.
  */
-export async function dispatchStepAction(
-    action: StepAction,
-    api: { actions: any }
-) {
+export async function dispatchStepAction(action: StepAction, api: { actions: any }) {
     switch (action.kind) {
         case "analyze":
             await api.actions.analyze();
@@ -247,11 +289,8 @@ export async function dispatchStepAction(
             await api.actions.goBack();
             return;
 
-        // The following kinds exist in types for future expansion;
-        // if you add them to tutorial steps, implement here.
         case "applyAlias":
             // For MVP we simulate alias via schema snapshot swapping (setSchema).
-            // If you later implement patching, you can handle it here.
             throw new Error("applyAlias action not wired: use setSchema with alias snapshot for now.");
     }
 }
