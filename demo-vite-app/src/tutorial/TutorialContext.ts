@@ -18,9 +18,6 @@ import type {
 /**
  * TutorialState represents the *entire* interactive tutorial runtime state.
  * This is the single source of truth for the demo app.
- *
- * The TutorialRunner mutates this state in response to step transitions
- * and user actions.
  */
 export type TutorialState = {
     tutorial: Tutorial;
@@ -49,6 +46,24 @@ export type TutorialState = {
     // misc
     isBusy?: boolean;
     lastError?: string;
+
+    /**
+     * ---- Compatibility aliases for UI panels ----
+     * Some UI components were written against a slightly different naming.
+     * We expose aliases so the rest of the app can stay stable.
+     */
+    // used by CodePanel + others
+    activeFormKey?: FormKey;
+
+    // used by CodePanel (it checks for "raw" mode)
+    rawPayloadText?: string;
+
+    // used by SchemaPanel
+    schemaSnapshot?: unknown;
+
+    // used by ResultPanel
+    lastAnalysis?: AnalyzeOutput;
+    lastSubmitResult?: SubmitOutput;
 };
 
 /**
@@ -59,6 +74,12 @@ export type TutorialActions = {
     // navigation
     goNext(): void;
     goBack(): void;
+
+    /**
+     * Optional “jump to step” (used by StepNavigator dot-click).
+     * Phase 1 can support it safely within the current story.
+     */
+    goToStep?(stepIndex: number): void;
 
     // schema
     setSchema(schemaRef: SchemaRef): void;
@@ -71,6 +92,12 @@ export type TutorialActions = {
     setPayloadJson(text: string): void;
     setPayloadMode(mode: PayloadMode): void;
     setContext(ctx: Partial<PersistxDemoContext>): void;
+
+    /**
+     * Fine-grained form editing (used by FormPanel)
+     * Implemented in TutorialRunner using setFormValues under the hood.
+     */
+    updateFormValue?(key: string, value: unknown): void;
 
     // persistx actions
     analyze(): Promise<void>;
@@ -93,6 +120,12 @@ export type TutorialContextValue = {
     step: Step;
     isFirstStep: boolean;
     isLastStep: boolean;
+
+    /**
+     * Convenience aliases (so some components can destructure directly).
+     * (Not required, but harmless + nice.)
+     */
+    updateFormValue?: (key: string, value: unknown) => void;
 };
 
 /**
@@ -106,8 +139,6 @@ export const TutorialContext = createContext<TutorialContextValue | null>(null);
  */
 export function useTutorial(): TutorialContextValue {
     const ctx = useContext(TutorialContext);
-    if (!ctx) {
-        throw new Error("useTutorial must be used within <TutorialContext.Provider>");
-    }
+    if (!ctx) throw new Error("useTutorial must be used within <TutorialContext.Provider>");
     return ctx;
 }
