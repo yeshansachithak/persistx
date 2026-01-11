@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    
+    <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed" />
+      <stop offset="100%" stop-color="#6d28d9" />
+    </linearGradient>
+    
+    <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    
+    <!-- Glow effect -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feFlood flood-color="#2563eb" flood-opacity="0.3" result="color" />
+      <feComposite in="color" in2="blur" operator="in" result="glow" />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    
+    <!-- Subtle glow for safety shield -->
+    <filter id="shieldGlow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feFlood flood-color="#10b981" flood-opacity="0.4"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="#0f172a" />
+  
+  <!-- Outer circular glow -->
+  <circle cx="512" cy="512" r="400" fill="#2563eb" opacity="0.1" />
+  
+  <!-- Main circular base -->
+  <circle cx="512" cy="512" r="380" fill="url(#blueGradient)" opacity="0.9" filter="url(#glow)" />
+  
+  <!-- Concentric circles representing versions -->
+  <g opacity="0.7">
+    <circle cx="512" cy="512" r="340" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="10,5" />
+    <circle cx="512" cy="512" r="300" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="15,10" />
+    <circle cx="512" cy="512" r="260" fill="none" stroke="#94a3b8" stroke-width="4" />
+  </g>
+  
+  <!-- Central diamond - represents forms/data at core -->
+  <g transform="translate(512 512) rotate(45)">
+    <rect x="-120" y="-120" width="240" height="240" fill="white" fill-opacity="0.95" rx="24" />
+    <rect x="-100" y="-100" width="200" height="200" fill="url(#purpleGradient)" rx="16" />
+    
+    <!-- Inner diamond pattern -->
+    <g transform="rotate(-45)">
+      <rect x="-60" y="-60" width="120" height="120" fill="none" stroke="white" stroke-width="3" stroke-opacity="0.6" rx="8" />
+      <line x1="-40" y1="0" x2="40" y2="0" stroke="white" stroke-width="2" stroke-opacity="0.8" />
+      <line x1="0" y1="-40" x2="0" y2="40" stroke="white" stroke-width="2" stroke-opacity="0.8" />
+    </g>
+  </g>
+  
+  <!-- Version layers around the diamond -->
+  <g transform="translate(512 512)">
+    <!-- Version layer 1 (outermost) -->
+    <path d="M -180,-180 L 180,-180 L 240,-120 L 240,120 L 180,180 L -180,180 L -240,120 L -240,-120 Z" 
+          fill="none" stroke="#f1f5f9" stroke-width="6" stroke-opacity="0.3" transform="rotate(45)" />
+    
+    <!-- Version layer 2 -->
+    <path d="M -140,-140 L 140,-140 L 180,-100 L 180,100 L 140,140 L -140,140 L -180,100 L -180,-100 Z" 
+          fill="none" stroke="#e2e8f0" stroke-width="5" stroke-opacity="0.5" transform="rotate(45)" />
+    
+    <!-- Version layer 3 -->
+    <path d="M -100,-100 L 100,-100 L 140,-60 L 140,60 L 100,100 L -100,100 L -140,60 L -140,-60 Z" 
+          fill="none" stroke="#cbd5e1" stroke-width="4" stroke-opacity="0.7" transform="rotate(45)" />
+  </g>
+  
+  <!-- Safety shield overlay - simplified -->
+  <g transform="translate(512 512)">
+    <path d="M0,-160 C0,-160 80,-80 80,0 C80,80 0,160 0,160 C0,160 -80,80 -80,0 C-80,-80 0,-160 0,-160 Z" 
+          fill="none" stroke="#10b981" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" 
+          opacity="0.6" filter="url(#shieldGlow)" />
+    
+    <!-- Shield accent lines -->
+    <path d="M0,-120 L0,-80" stroke="#10b981" stroke-width="4" stroke-linecap="round" opacity="0.8" />
+    <path d="M-40,-40 L40,40" stroke="#10b981" stroke-width="3" stroke-linecap="round" opacity="0.6" />
+    <path d="M-40,40 L40,-40" stroke="#10b981" stroke-width="3" stroke-linecap="round" opacity="0.6" />
+  </g>
+  
+  <!-- Data flow arrows (simplified, more abstract) -->
+  <g transform="translate(512 512)">
+    <!-- Circular flow arrows around center -->
+    <g transform="rotate(-30)">
+      <path d="M 0,-300 A 300,300 0 0,1 300,0" 
+            fill="none" stroke="#fbbf24" stroke-width="6" 
+            marker-end="url(#arrowhead)" opacity="0.9" />
+    </g>
+    
+    <g transform="rotate(150)">
+      <path d="M 0,-280 A 280,280 0 0,1 280,0" 
+            fill="none" stroke="#60a5fa" stroke-width="5" 
+            marker-end="url(#arrowhead)" opacity="0.8" />
+    </g>
+    
+    <!-- Arrowhead definition -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+            refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24" />
+    </marker>
+  </g>
+  
+  <!-- Data nodes/connection points -->
+  <g>
+    <!-- Primary nodes (connected to diamond) -->
+    <circle cx="300" cy="300" r="16" fill="#f59e0b">
+      <animate attributeName="r" values="16;20;16" dur="2s" repeatCount="indefinite" />
+    </circle>
+    
+    <circle cx="724" cy="300" r="16" fill="#10b981">
+      <animate attributeName="r" values="16;20;16" dur="2s" repeatCount="indefinite" begin="0.5s" />
+    </circle>
+    
+    <circle cx="724" cy="724" r="16" fill="#ef4444">
+      <animate attributeName="r" values="16;20;16" dur="2s" repeatCount="indefinite" begin="1s" />
+    </circle>
+    
+    <circle cx="300" cy="724" r="16" fill="#8b5cf6">
+      <animate attributeName="r" values="16;20;16" dur="2s" repeatCount="indefinite" begin="1.5s" />
+    </circle>
+    
+    <!-- Secondary nodes -->
+    <circle cx="200" cy="512" r="12" fill="#3b82f6" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite" />
+    </circle>
+    
+    <circle cx="824" cy="512" r="12" fill="#3b82f6" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite" begin="1s" />
+    </circle>
+    
+    <circle cx="512" cy="200" r="12" fill="#3b82f6" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite" begin="0.5s" />
+    </circle>
+    
+    <circle cx="512" cy="824" r="12" fill="#3b82f6" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite" begin="1.5s" />
+    </circle>
+  </g>
+  
+  <!-- Connecting network lines -->
+  <g opacity="0.3">
+    <!-- Main connections between primary nodes and center -->
+    <line x1="512" y1="512" x2="300" y2="300" stroke="#94a3b8" stroke-width="2" stroke-dasharray="8,4" />
+    <line x1="512" y1="512" x2="724" y2="300" stroke="#94a3b8" stroke-width="2" stroke-dasharray="8,4" />
+    <line x1="512" y1="512" x2="724" y2="724" stroke="#94a3b8" stroke-width="2" stroke-dasharray="8,4" />
+    <line x1="512" y1="512" x2="300" y2="724" stroke="#94a3b8" stroke-width="2" stroke-dasharray="8,4" />
+    
+    <!-- Connections between primary nodes -->
+    <path d="M 300,300 Q 512,380 724,300" fill="none" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5,3" />
+    <path d="M 724,300 Q 760,512 724,724" fill="none" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5,3" />
+    <path d="M 724,724 Q 512,644 300,724" fill="none" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5,3" />
+    <path d="M 300,724 Q 264,512 300,300" fill="none" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5,3" />
+  </g>
+  
+  <!-- Subtle background grid (very faint) -->
+  <g opacity="0.05">
+    <!-- Horizontal lines -->
+    <line x1="100" y1="256" x2="924" y2="256" stroke="white" stroke-width="1" />
+    <line x1="100" y1="384" x2="924" y2="384" stroke="white" stroke-width="1" />
+    <line x1="100" y1="512" x2="924" y2="512" stroke="white" stroke-width="1" />
+    <line x1="100" y1="640" x2="924" y2="640" stroke="white" stroke-width="1" />
+    <line x1="100" y1="768" x2="924" y2="768" stroke="white" stroke-width="1" />
+    
+    <!-- Vertical lines -->
+    <line x1="256" y1="100" x2="256" y2="924" stroke="white" stroke-width="1" />
+    <line x1="384" y1="100" x2="384" y2="924" stroke="white" stroke-width="1" />
+    <line x1="512" y1="100" x2="512" y2="924" stroke="white" stroke-width="1" />
+    <line x1="640" y1="100" x2="640" y2="924" stroke="white" stroke-width="1" />
+    <line x1="768" y1="100" x2="768" y2="924" stroke="white" stroke-width="1" />
+  </g>
+  
+  <!-- Subtle particle effects -->
+  <g opacity="0.6">
+    <!-- Tiny particles floating outward -->
+    <circle cx="350" cy="400" r="2" fill="#60a5fa">
+      <animate attributeName="cx" values="350;360;350" dur="4s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="400;390;400" dur="4s" repeatCount="indefinite" />
+    </circle>
+    
+    <circle cx="650" cy="600" r="2" fill="#f59e0b">
+      <animate attributeName="cx" values="650;640;650" dur="3s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="600;610;600" dur="3s" repeatCount="indefinite" />
+    </circle>
+    
+    <circle cx="450" cy="650" r="1.5" fill="#10b981">
+      <animate attributeName="cx" values="450;460;450" dur="5s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="650;640;650" dur="5s" repeatCount="indefinite" />
+    </circle>
+  </g>
+</svg>

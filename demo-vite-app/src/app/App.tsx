@@ -1,35 +1,49 @@
 // src/app/App.tsx
-import { useState } from 'react'
-import reactLogo from '../assets/react.svg'
-import viteLogo from '/vite.svg'
 
-function App() {
-  const [count, setCount] = useState(0)
+import AppProviders from "./AppProviders";
+import FourPanelLayout from "../ui/layout/FourPanelLayout";
 
+import Header from "../ui/layout/Header";
+import StepNavigator from "../ui/controls/StepNavigator";
+import ActionButtons from "../ui/controls/ActionButtons";
+
+import FormPanel from "../ui/panels/FormPanel";
+import CodePanel from "../ui/panels/CodePanel";
+import SchemaPanel from "../ui/panels/SchemaPanel";
+import ResultPanel from "../ui/panels/ResultPanel";
+
+/**
+ * Root app shell.
+ *
+ * This file is intentionally "dumb":
+ * - Providers wire the tutorial + persistx runtime
+ * - Layout renders the 4 panels
+ * - Panels read/write via TutorialContext
+ */
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <AppProviders>
+      <div className="min-h-dvh bg-zinc-50">
+        <Header />
 
-export default App
+        <main className="mx-auto max-w-7xl px-4 pb-10 pt-6">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <StepNavigator />
+            <ActionButtons />
+          </div>
+
+          <FourPanelLayout
+            a={<FormPanel />}
+            b={<CodePanel />}
+            c={<SchemaPanel />}
+            d={<ResultPanel />}
+          />
+        </main>
+
+        <footer className="mx-auto max-w-7xl px-4 pb-10 pt-6 text-center text-xs text-zinc-500">
+          PersistX is a contract layer — schema evolution should be boring, safe, and reviewable.
+        </footer>
+      </div>
+    </AppProviders>
+  );
+}
