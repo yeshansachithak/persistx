@@ -203,7 +203,7 @@ export function applyUiPatches(uiFields: UiField[], patches: UiPatch[]): UiField
 
 /**
  * Build payload from "form mode" values, using uiFields order.
- * - excludes hidden fields (unless user has a value and you want to include)
+ * - excludes hidden fields
  * - excludes undefined / empty string (keep 0/false)
  */
 export function buildPayloadFromForm(uiFields: UiField[], formValues: Record<string, unknown>): Record<string, unknown> {
@@ -258,9 +258,6 @@ export function resolveSchemaVersion(schemaRef: SchemaRef): number | undefined {
  */
 export function createTutorialEngine(deps: TutorialEngineDeps) {
     const t = deps.tutorial;
-
-    const story0 = getStory(t, 0);
-    const step0 = getStep(story0, 0);
 
     const initialState: TutorialEngineState = {
         tutorial: t,
@@ -551,11 +548,8 @@ export function createTutorialEngine(deps: TutorialEngineDeps) {
 
         // actions
         analyze: async (state: TutorialEngineState) => analyze(state),
-        submit: async (
-            state: TutorialEngineState,
-            expect?: "success" | "error",
-            expectedErrorContains?: string
-        ) => submit(state, expect, expectedErrorContains),
+        submit: async (state: TutorialEngineState, expect?: "success" | "error", expectedErrorContains?: string) =>
+            submit(state, expect, expectedErrorContains),
         clearDb
     };
 }
