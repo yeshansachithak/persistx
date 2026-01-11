@@ -3,13 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import TutorialRunner from "../tutorial/TutorialRunner";
 import { petTutorial } from "../tutorials/pet/pet.tutorial";
-import { createSchemaLoader } from "../persistx/schemaLoader";
+import { createSchemaLoader, type SchemaSnapshot } from "../persistx/schemaLoader";
 import { createPersistxRuntime, type PersistxRuntime } from "../persistx/persistxClient";
-
-type SchemaSnapshot = {
-    persistx: number;
-    definitions: any[];
-};
 
 type AppProvidersProps = {
     children: React.ReactNode;
@@ -19,7 +14,7 @@ type AppProvidersProps = {
  * AppProviders wires:
  * - chosen tutorial (petTutorial)
  * - schema loader (from /public/schemas/...)
- * - PersistX runtime (engine + registry + adapter)
+ * - PersistX runtime (adapter + persistx + registry rebuild on schema swap)
  * - TutorialRunner (context + navigation + step execution)
  *
  * UI is passed as children and consumes TutorialContext.
@@ -32,13 +27,13 @@ export default function AppProviders({ children }: AppProvidersProps) {
     const [bootError, setBootError] = useState<string>("");
     const [runtime, setRuntime] = useState<PersistxRuntime | null>(null);
 
-    // Bootstrap runtime with schema v1 by default.
-    // Tutorial steps can later swap schema snapshots via actions (setSchema).
     useEffect(() => {
         let cancelled = false;
 
         (async () => {
             setBootError("");
+            setRuntime(null);
+
             try {
                 const schema = (await loadSchema({
                     kind: "snapshot",
@@ -63,11 +58,17 @@ export default function AppProviders({ children }: AppProvidersProps) {
         return (
             <div className="min-h-dvh bg-zinc-50 p-6">
                 <div className="mx-auto max-w-3xl rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900">
-                    <div className="font-semibold">Failed to start demo</div>
+                    <div className="font-semibold">Failed to start PersistX demo</div>
+
                     <pre className="mt-2 whitespace-pre-wrap text-xs">{bootError}</pre>
+
                     <div className="mt-3 text-xs text-rose-800">
-                        Check that your schema snapshots exist under{" "}
+                        Expected schema snapshots under{" "}
                         <code className="rounded bg-white/60 px-1 py-0.5">public{tutorial.schemaBaseUrl}</code>
+                        , for example{" "}
+                        <code className="rounded bg-white/60 px-1 py-0.5">
+                            public{tutorial.schemaBaseUrl}/schema.v1.json
+                        </code>
                         .
                     </div>
                 </div>

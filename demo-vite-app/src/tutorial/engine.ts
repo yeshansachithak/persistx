@@ -375,19 +375,32 @@ export function createTutorialEngine(deps: TutorialEngineDeps) {
             return { ...state, submitOutput, lastError: undefined };
         } catch (e: any) {
             const msg = e?.message ?? String(e);
-            const submitOutput: SubmitOutput = { ok: false, error: msg };
+            const detailsText =
+                typeof e?.details === "string"
+                    ? e.details
+                    : e?.details
+                        ? JSON.stringify(e.details, null, 2)
+                        : "";
 
-            if (expect === "success") return { ...state, submitOutput, lastError: msg };
+            const combined = `${msg}\n${detailsText}`.toLowerCase();
+
+            const submitOutput: SubmitOutput = {
+                ok: false,
+                error: msg,
+                details: detailsText || undefined
+            };
 
             if (expect === "error" && expectedErrorContains) {
-                if (!msg.toLowerCase().includes(expectedErrorContains.toLowerCase())) {
+                if (!combined.includes(expectedErrorContains.toLowerCase())) {
                     return {
                         ...state,
                         submitOutput,
-                        lastError: `Expected error to contain "${expectedErrorContains}", but got: ${msg}`,
+                        lastError: `Expected error to contain "${expectedErrorContains}", but got:\n\n${msg}\n\n${detailsText}`
                     };
                 }
             }
+
+            if (expect === "success") return { ...state, submitOutput, lastError: msg };
 
             return { ...state, submitOutput, lastError: undefined };
         }
