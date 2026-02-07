@@ -37,12 +37,11 @@ export default function SchemaPanel() {
             }
         >
             <div className="grid gap-3">
-                <CodeBlock code={schemaJson} language="json" />
-
                 <div className="text-xs text-zinc-500">
                     If your UI sends fields that don’t exist in this schema version, PersistX will reject the
                     submission (or treat them as unknown, depending on settings).
                 </div>
+                <CodeBlock code={schemaJson} language="json" />
             </div>
         </Card>
     );
