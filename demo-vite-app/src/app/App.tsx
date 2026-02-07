@@ -4,13 +4,12 @@ import AppProviders from "./AppProviders";
 import FourPanelLayout from "../ui/layout/FourPanelLayout";
 
 import Header from "../ui/layout/Header";
-import StepNavigator from "../ui/controls/StepNavigator";
-import ActionButtons from "../ui/controls/ActionButtons";
 
 import FormPanel from "../ui/panels/FormPanel";
 import CodePanel from "../ui/panels/CodePanel";
 import SchemaPanel from "../ui/panels/SchemaPanel";
 import ResultPanel from "../ui/panels/ResultPanel";
+import TutorialControls from "../ui/controls/TutorialControls";
 
 /**
  * Root app shell.
@@ -27,9 +26,8 @@ export default function App() {
         <Header />
 
         <main className="mx-auto max-w-7xl px-4 pb-10 pt-6">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <StepNavigator />
-            <ActionButtons />
+          <div className="mb-4">
+            <TutorialControls />
           </div>
 
           <FourPanelLayout
