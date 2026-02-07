@@ -10,6 +10,7 @@ import CodePanel from "../ui/panels/CodePanel";
 import SchemaPanel from "../ui/panels/SchemaPanel";
 import ResultPanel from "../ui/panels/ResultPanel";
 import TutorialControls from "../ui/controls/TutorialControls";
+import VisualDiff from "../ui/common/VisualDiff";
 
 /**
  * Root app shell.
@@ -26,6 +27,10 @@ export default function App() {
         <Header />
 
         <main className="mx-auto max-w-7xl px-4 pb-10 pt-6">
+          <div className="mb-4">
+            <VisualDiff />
+          </div>
+
           <div className="mb-4">
             <TutorialControls />
           </div>
