@@ -1,6 +1,11 @@
 # PersistX
 
-**PersistX** is a schema-driven persistence engine designed to make form submissions, versioning, and data evolution **safe, explicit, and predictable**.
+![MIT License](https://img.shields.io/badge/license-MIT-green.svg)
+![Status](https://img.shields.io/badge/status-stable-brightgreen)
+![Browser Safe](https://img.shields.io/badge/runtime-browser--safe-blue)
+![Schema Evolution](https://img.shields.io/badge/schema-evolution--safe-purple)
+
+**PersistX** is a **schema-driven persistence engine** designed to make form submissions, versioning, and data evolution **safe, explicit, and predictable**.
 
 It sits between your **frontend forms** and **backend storage**, enforcing:
 
@@ -14,6 +19,103 @@ It is a **persistence contract**.
 
 ---
 
+## 📖 Table of Contents
+
+- [🚀 Try the Interactive Demo](#-try-the-interactive-demo-recommended)
+- [📦 Installation](#-installation)
+- [⚡ Quick Start](#-quick-start)
+- [Why PersistX?](#why-persistx)
+- [What the Demo Teaches](#what-the-demo-teaches)
+- [Core Concepts](#core-concepts)
+- [CLI Workflow](#cli-workflow-schema-evolution)
+- [Runtime Safety Guarantees](#runtime-safety-guarantees)
+- [Why not Zod / Prisma / Drizzle?](#why-not-zod--prisma--drizzle)
+- [When Should You Use PersistX?](#when-should-you-use-persistx)
+- [Adapter Example](#adapter-example)
+- [Status](#status)
+- [License](#license)
+- [Philosophy](#philosophy)
+
+---
+
+## 🚀 Try the Interactive Demo (Recommended)
+
+👉 **[🚀 Live Interactive Demo](https://yeshansachithak.github.io/persistx/)**
+
+The demo is the fastest way to understand PersistX. It walks you through:
+
+1. **Baseline save** (UI + schema match)
+2. **Schema mismatch** (UI changes faster than schema)
+3. **Safe rename using aliases**
+
+You will _see_:
+
+- payloads fail on purpose
+- renames break without aliases
+- canonical DB shape remain clean
+
+If you understand the demo, you understand PersistX.
+
+---
+
+## 📦 Installation
+
+```bash
+npm install @persistx/core
+# or
+yarn add @persistx/core
+```
+
+For CLI features:
+
+```bash
+npm install -g @persistx/cli
+# or use via npx
+npx @persistx/cli init
+```
+
+---
+
+## ⚡ Quick Start
+
+```typescript
+import { createPersistx, createInMemoryRegistry } from "@persistx/core";
+
+// 1. Define your schema
+const definitions = [
+  {
+    formKey: "userProfile",
+    version: 1,
+    collection: "profiles",
+    writeMode: "upsert",
+    allowUnknownFields: false,
+    fields: [
+      { key: "name", type: "string", rules: [{ kind: "required" }] },
+      { key: "email", type: "string", rules: [{ kind: "required" }] },
+    ],
+  },
+];
+
+// 2. Create engine
+const registry = createInMemoryRegistry(definitions);
+const persistx = createPersistx({
+  registry,
+  adapter: myDatabaseAdapter, // Your Firestore/MongoDB/etc adapter
+});
+
+// 3. Submit data
+await persistx.submit(
+  "userProfile",
+  {
+    name: "Alice",
+    email: "alice@example.com",
+  },
+  { uid: "user-123" },
+);
+```
+
+---
+
 ## Why PersistX?
 
 Most systems break when forms evolve:
@@ -22,7 +124,7 @@ Most systems break when forms evolve:
 - payloads change shape
 - old clients keep sending old data
 
-PersistX solves this by making **schema versioning a first-class concept**.
+PersistX solves this by making **schema versioning a first-class runtime concept**.
 
 You get:
 
@@ -37,43 +139,23 @@ No guessing.
 
 ---
 
-## Try the Interactive Demo (Recommended)
+## What the Demo Teaches
 
-The fastest way to understand PersistX is the interactive demo.
-
-```bash
-yarn install
-yarn workspace demo-vite-app dev
-```
-
-What the demo teaches:
-
-1. **Configure**
-   - choose `formKey`
-   - choose schema version
-   - set `context.uid`
-
-2. **Edit Payload**
-   - form mode or raw JSON
-   - simulate legacy or new clients
-
-3. **Analyze**
-   - validation result
-   - normalized payload
-   - alias mapping
-   - unknown-field detection
-
-4. **Submit**
-   - inspect the exact adapter request
-   - view the stored DB snapshot
-
-The demo mirrors the PersistX pipeline exactly:
+The interactive tutorial mirrors the PersistX pipeline exactly:
 
 ```
 validate → normalize → map → save
 ```
 
-If you understand the demo, you understand PersistX.
+You can:
+
+- switch between **form mode** and **raw JSON**
+- simulate **legacy vs modern clients**
+- preview **alias mapping and unknown fields**
+- inspect the **exact adapter request**
+- view the **stored DB snapshot**
+
+This is not a mock — it's the real engine.
 
 ---
 
@@ -85,10 +167,10 @@ A **Form Definition** describes:
 
 - what data is allowed
 - how it is validated
-- how IDs are generated
+- how document IDs are generated
 - how writes behave (create / update / upsert)
 
-Example (`schema.json`):
+Example:
 
 ```json
 {
@@ -119,128 +201,73 @@ Example (`schema.json`):
 }
 ```
 
----
-
 ### 2. PersistX Engine
-
-The engine is created at runtime:
 
 ```ts
 import { createPersistx, createInMemoryRegistry } from "@persistx/core";
 
 const registry = createInMemoryRegistry(definitions);
 const persistx = createPersistx({ adapter, registry });
-```
 
-Submit payloads:
-
-```ts
 await persistx.submit("petProfile", payload, { uid: "user-001" });
 ```
 
-PersistX guarantees the following order:
+PersistX guarantees:
 
-1. resolve schema version
-2. validate payload
-3. normalize values
-4. map fields (aliases, canonical keys)
-5. detect unknown fields
-6. resolve document ID
-7. call `adapter.save()`
+1. schema resolution
+2. validation
+3. normalization
+4. alias mapping
+5. unknown-field detection
+6. ID resolution
+7. adapter save
 
-Adapters **never see invalid or unmapped data**.
+Adapters **never receive invalid or unmapped data**.
 
 ---
 
 ## CLI Workflow (Schema Evolution)
 
-PersistX ships with a **Node-only CLI** for managing schemas safely.
+PersistX ships with a **Node-only CLI**.
 
-### 1. Initialize Schema
+### Initialize schema
 
 ```bash
 persistx init
 ```
 
-Creates:
-
-```
-definitions/schema.json
-```
-
-A single-file schema is the recommended workflow.
-
----
-
-### 2. Evolve a Form
-
-Example: rename `petType` → `type`, bump version.
-
-```json
-{
-  "formKey": "petProfile",
-  "version": 2,
-  "fields": [{ "key": "petName" }, { "key": "type" }, { "key": "age" }]
-}
-```
-
----
-
-### 3. Diff Schemas (Safe Renames)
+### Diff schema safely
 
 ```bash
-persistx diff --file definitions/schema.json
+persistx diff --file schema.json
 ```
 
-Output:
+Example output:
 
 ```
-=== petProfile: v1 -> v2 ===
-Map "petType" -> "type" ? (confidence=0.65)
+Map "petType" → "type" ? (confidence=0.65)
 ```
 
-Apply aliases explicitly:
+Apply explicitly:
 
 ```bash
-persistx diff --file definitions/schema.json --apply
-```
-
-Result:
-
-```json
-{
-  "key": "type",
-  "aliases": ["petType"]
-}
+persistx diff --apply
 ```
 
 PersistX **never guesses renames at runtime**.
 
----
-
-### 4. Migrate Existing Data
+### Migrate existing data
 
 Preview migration:
 
 ```bash
-persistx migrate \
-  --form petProfile \
-  --input payload.json
+persistx migrate --form petProfile --input old-data.json
 ```
 
 Apply migration:
 
 ```bash
-persistx migrate \
-  --form petProfile \
-  --input payload.json \
-  --apply
-```
-
-Writes:
-
-```
-payload.json.migrated.json
+persistx migrate --form petProfile --input old-data.json --apply
 ```
 
 ---
@@ -253,7 +280,7 @@ PersistX guarantees:
 - ❌ invalid payloads never reach storage
 - ❌ silent renames never happen
 - ✅ schema changes are explicit and reviewable
-- ✅ adapters receive only validated, mapped data
+- ✅ adapters receive only validated, canonical data
 
 If data reaches your adapter, it is **safe by construction**.
 
@@ -263,13 +290,32 @@ If data reaches your adapter, it is **safe by construction**.
 
 - `@persistx/core` is **browser-safe**
 - no `fs`, `path`, or Node APIs
-- safe for Vite, Webpack, and edge runtimes
+- safe for Vite, Webpack, Edge runtimes
 
 CLI tooling lives in:
 
 - `@persistx/cli` (Node-only)
 
 This boundary is intentional.
+
+---
+
+## Why not Zod / Prisma / Drizzle?
+
+PersistX does **not replace** these tools. It solves a _different problem_.
+
+| Problem                        | Zod | Prisma | Drizzle | **PersistX** |
+| ------------------------------ | --- | ------ | ------- | ------------ |
+| Runtime validation             | ✅  | ❌     | ❌      | ✅           |
+| Database queries               | ❌  | ✅     | ✅      | ❌           |
+| Schema evolution               | ❌  | ⚠️     | ⚠️      | ✅           |
+| Legacy client support          | ❌  | ❌     | ❌      | ✅           |
+| Safe field renames             | ❌  | ❌     | ❌      | ✅           |
+| Multi-client payload contracts | ❌  | ❌     | ❌      | ✅           |
+
+**PersistX lives between frontend payloads and storage**, where schema drift actually happens.
+
+It complements Zod and ORMs — it doesn't compete with them.
 
 ---
 
@@ -302,8 +348,6 @@ If your schema is static and tightly coupled to one backend, PersistX may be unn
 
 ## Adapter Example
 
-A minimal Firestore-style adapter:
-
 ```ts
 import type { PersistxAdapter } from "@persistx/core";
 
@@ -334,10 +378,10 @@ Adapters stay simple because PersistX does the hard work.
 
 ## Status
 
-- Core: **stable**
-- Demo: **production-ready**
-- CLI: evolving
-- Adapters: in progress
+- **Core**: Stable
+- **Demo**: Production-ready
+- **CLI**: Evolving
+- **Adapters**: In progress
 
 ---
 
@@ -349,4 +393,6 @@ MIT
 
 ## Philosophy
 
-> **“Schema evolution should be boring, safe, and reviewable.”**
+> **"Schema evolution should be boring, safe, and reviewable."**
+
+PersistX makes that real by providing a robust contract layer that protects your data as your applications evolve, ensuring that both new and legacy clients can coexist without breaking your persistence layer.
