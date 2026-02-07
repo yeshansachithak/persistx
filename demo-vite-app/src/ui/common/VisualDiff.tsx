@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useTutorial } from "../../tutorial/TutorialContext";
-import type { StepAction } from "../../tutorial/types";
+import type { StepAction, UiPatch } from "../../tutorial/types";
 
 type RenamePatch = {
     op: "renameField";
@@ -11,39 +11,105 @@ type RenamePatch = {
     label?: string;
 };
 
+type SchemaSnapshot = {
+    persistx: number;
+    definitions: any[];
+};
+
+function isRenamePatch(p: UiPatch | any): p is RenamePatch {
+    return !!p && p.op === "renameField" && typeof p.from === "string" && typeof p.to === "string";
+}
+
 function isRenameAction(a: StepAction): a is StepAction & { kind: "applyUiPatch"; patch: RenamePatch } {
-    return a.kind === "applyUiPatch" && (a as any).patch?.op === "renameField";
+    return a.kind === "applyUiPatch" && isRenamePatch((a as any).patch);
 }
 
 function isSetSchemaAction(a: StepAction): a is StepAction & { kind: "setSchema"; schemaRef: any } {
     return a.kind === "setSchema" && !!(a as any).schemaRef;
 }
 
+function schemaLabelFromRef(ref: any): string {
+    if (!ref) return "schema";
+    if (typeof ref?.versionLabel === "string" && ref.versionLabel.trim()) return ref.versionLabel;
+    if (ref.kind === "snapshot" && ref.file) return String(ref.file);
+    if (ref.kind === "version" && typeof ref.version === "number") return `v${ref.version}`;
+    return "schema";
+}
+
+function pickDef(snapshot: SchemaSnapshot | any | undefined, formKey: string) {
+    const defs = snapshot?.definitions;
+    if (!Array.isArray(defs)) return null;
+    return defs.find((d) => d?.formKey === formKey) ?? null;
+}
+
+function getAliasesFor(def: any, canonicalKey: string): string[] {
+    const fields = Array.isArray(def?.fields) ? def.fields : [];
+    const f = fields.find((x: any) => x?.key === canonicalKey);
+    const aliases = Array.isArray(f?.aliases) ? f.aliases.map(String) : [];
+    return aliases;
+}
+
 export default function VisualDiff() {
     const { step, state } = useTutorial();
 
-    const rename = useMemo(() => {
-        const actions = step.actions ?? [];
-        const a = actions.find(isRenameAction);
-        return a ? (a as any).patch as RenamePatch : null;
-    }, [step.actions]);
+    // Step actions may be undefined in some steps
+    const stepActions = step?.actions ?? [];
 
+    // Detect rename either from a button action OR from step.enter uiPatches
+    const rename = useMemo<RenamePatch | null>(() => {
+        const a = stepActions.find(isRenameAction);
+        if (a) return (a as any).patch as RenamePatch;
+
+        const enterPatches = (step as any)?.enter?.uiPatches ?? [];
+        if (Array.isArray(enterPatches)) {
+            const rp = enterPatches.find(isRenamePatch);
+            return rp ? (rp as RenamePatch) : null;
+        }
+
+        return null;
+    }, [stepActions, step]);
+
+    // Detect "upcoming schema change" from setSchema action in this step
     const schemaTarget = useMemo(() => {
-        const actions = step.actions ?? [];
-        const a = actions.find(isSetSchemaAction);
+        const a = stepActions.find(isSetSchemaAction);
         if (!a) return null;
         const ref = (a as any).schemaRef;
-        // expecting snapshot file naming like schema.v3.rename-with-alias.json
         const file = ref?.kind === "snapshot" ? String(ref.file ?? "") : "";
-        const label = ref?.versionLabel ? String(ref.versionLabel) : "";
-        return { file, label };
-    }, [step.actions]);
+        const label = schemaLabelFromRef(ref);
+        return { file, label, ref };
+    }, [stepActions]);
+
+    const currentSchemaLabel = useMemo(() => schemaLabelFromRef((state as any).schemaRef), [state]);
+
+    // Analyze output can be on either alias name
+    const analysis = (state as any).lastAnalysis ?? (state as any).analyzeOutput ?? null;
+
+    const unknown = Array.isArray(analysis?.unknownInPayload) ? analysis.unknownInPayload : [];
+    const mappedKeys = analysis?.mapped && typeof analysis.mapped === "object" ? Object.keys(analysis.mapped) : [];
+
+    // Schema snapshot might be stored under alias name too
+    const snapshot: SchemaSnapshot | undefined =
+        (state as any).schemaSnapshot ?? (state as any).schemaSnapshotAlias ?? undefined;
+
+    const formKey = (state as any).formKey ?? "petProfile";
+
+    // If current snapshot has alias info, show it dynamically
+    const aliasInfo = useMemo(() => {
+        const def = pickDef(snapshot, formKey);
+        if (!def) return null;
+
+        // Try to infer canonicalKey in rename story:
+        // - if rename exists, the "to" key is a likely canonical target
+        // - otherwise, try common known key "type" when v3
+        const canonicalKey = rename?.to ?? "type";
+        const aliases = getAliasesFor(def, canonicalKey);
+
+        if (!aliases.length) return null;
+
+        return { canonicalKey, aliases };
+    }, [snapshot, formKey, rename]);
 
     const shouldShow = !!rename || !!schemaTarget;
-
-    const unknown = state.lastAnalysis?.unknownInPayload ?? [];
-    const mappedKeys = state.lastAnalysis?.mapped ? Object.keys(state.lastAnalysis.mapped) : [];
-
     if (!shouldShow) return null;
 
     return (
@@ -52,11 +118,17 @@ export default function VisualDiff() {
                 <div>
                     <div className="text-xs font-semibold text-zinc-500">Visual Diff</div>
                     <div className="mt-0.5 text-sm font-bold text-zinc-900">What changed in this step</div>
+                    <div className="mt-1 text-xs text-zinc-600">
+                        Current schema:{" "}
+                        <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[11px] font-semibold text-zinc-700">
+                            {currentSchemaLabel}
+                        </span>
+                    </div>
                 </div>
 
                 {schemaTarget?.label ? (
                     <span className="shrink-0 rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[11px] font-semibold text-zinc-700">
-                        {schemaTarget.label}
+                        Next schema: {schemaTarget.label}
                     </span>
                 ) : null}
             </div>
@@ -65,28 +137,48 @@ export default function VisualDiff() {
                 {/* UI rename */}
                 {rename ? (
                     <DiffRow
-                        title="UI change"
+                        title="UI change (rename)"
                         left={`"${rename.from}"`}
                         right={`"${rename.to}"`}
                         note="Frontend renamed a field key."
                     />
                 ) : null}
 
-                {/* Schema change (alias step) */}
+                {/* Why this is dangerous (inline, only when rename exists) */}
+                {rename ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                        <div className="text-xs font-semibold text-amber-900">Why this is dangerous</div>
+                        <ul className="mt-2 list-disc pl-5 text-xs text-amber-900/90">
+                            <li>Old clients may still send <b>{rename.from}</b> while new clients send <b>{rename.to}</b>.</li>
+                            <li>Without explicit aliases, your DB can drift into mixed shapes (silent corruption).</li>
+                            <li>PersistX forces you to be explicit so renames are reviewable and reversible.</li>
+                        </ul>
+                    </div>
+                ) : null}
+
+                {/* Schema change details */}
                 {schemaTarget ? (
                     <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
                         <div className="text-xs font-semibold text-zinc-700">Schema change</div>
-                        <div className="mt-1 text-xs text-zinc-600">
-                            {schemaTarget.file.includes("rename-with-alias") ? (
-                                <>
-                                    Canonical key is <b>type</b>, but schema also accepts alias <b>petType</b>.
-                                </>
-                            ) : (
-                                <>
-                                    Schema snapshot switched: <span className="font-mono">{schemaTarget.file}</span>
-                                </>
-                            )}
-                        </div>
+
+                        {/* If alias exists in the currently loaded snapshot, explain it from real data */}
+                        {aliasInfo ? (
+                            <div className="mt-1 text-xs text-zinc-600">
+                                Canonical key is <b>{aliasInfo.canonicalKey}</b>, schema also accepts aliases:{" "}
+                                {aliasInfo.aliases.map((a) => (
+                                    <span
+                                        key={a}
+                                        className="ml-1 inline-flex rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-zinc-700"
+                                    >
+                                        {a}
+                                    </span>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="mt-1 text-xs text-zinc-600">
+                                Schema snapshot will switch: <span className="font-mono">{schemaTarget.file || schemaTarget.label}</span>
+                            </div>
+                        )}
                     </div>
                 ) : null}
 
@@ -94,7 +186,7 @@ export default function VisualDiff() {
                 <div className="rounded-xl border border-zinc-200 bg-white p-3">
                     <div className="text-xs font-semibold text-zinc-700">Impact (from Analyze)</div>
 
-                    {state.lastAnalysis ? (
+                    {analysis ? (
                         <div className="mt-2 grid gap-2">
                             <KeyList
                                 label="Unknown keys (blocked by schema)"
@@ -105,7 +197,7 @@ export default function VisualDiff() {
                             <KeyList
                                 label="Mapped keys (what PersistX will store)"
                                 keys={mappedKeys}
-                                emptyText="Run Analyze to see mapped keys."
+                                emptyText="No mapped output."
                                 tone="ok"
                             />
                         </div>
