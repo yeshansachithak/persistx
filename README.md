@@ -22,19 +22,22 @@ It is a **persistence contract**.
 ## 📖 Table of Contents
 
 - [🚀 Try the Interactive Demo](#-try-the-interactive-demo-recommended)
-- [📦 Installation](#-installation)
-- [⚡ Quick Start](#-quick-start)
-- [Why PersistX?](#why-persistx)
-- [What the Demo Teaches](#what-the-demo-teaches)
-- [Core Concepts](#core-concepts)
-- [CLI Workflow](#cli-workflow-schema-evolution)
-- [Runtime Safety Guarantees](#runtime-safety-guarantees)
-- [Why not Zod / Prisma / Drizzle?](#why-not-zod--prisma--drizzle)
-- [When Should You Use PersistX?](#when-should-you-use-persistx)
-- [Adapter Example](#adapter-example)
-- [Status](#status)
-- [License](#license)
-- [Philosophy](#philosophy)
+- [📦 Installation](#📦-installation)
+- [⚡ Quick Start](#⚡-quick-start)
+- [❓ Why PersistX?](#❓-why-persistx)
+- [🎯 What the Demo Teaches](#🎯-what-the-demo-teaches)
+- [🔧 Core Concepts](#🔧-core-concepts)
+- [🛠️ CLI Workflow](#🛠️-cli-workflow-schema-evolution)
+- [🛡️ Runtime Safety Guarantees](#🛡️-runtime-safety-guarantees)
+- [🔍 Browser vs Node Boundary](#🔍-browser-vs-node-boundary)
+- [🔄 Why not Zod / Prisma / Drizzle?](#🔄-why-not-zod--prisma--drizzle)
+- [🚫 What PersistX Is NOT](#🚫-what-persistx-is-not)
+- [✅ When Should You Use PersistX?](#✅-when-should-you-use-persistx)
+- [🔌 Adapter Example](#🔌-adapter-example)
+- [👥 Who Is It For?](#👥-who-is-it-for)
+- [📊 Status](#📊-status)
+- [📄 License](#📄-license)
+- [💭 Philosophy](#💭-philosophy)
 
 ---
 
@@ -60,7 +63,7 @@ This is not a mock — it's the real engine.
 
 ---
 
-### What the demo teaches
+### 🎯 What the demo teaches
 
 1. **Configure**
    - choose `formKey`
@@ -149,7 +152,7 @@ await persistx.submit(
 
 ---
 
-## Why PersistX?
+## ❓ Why PersistX?
 
 Most systems break when forms evolve:
 
@@ -172,7 +175,7 @@ No guessing.
 
 ---
 
-## Core Concepts
+## 🔧 Core Concepts
 
 ### 1. Form Definitions
 
@@ -239,7 +242,7 @@ Adapters **never receive invalid or unmapped data**.
 
 ---
 
-## CLI Workflow (Schema Evolution)
+## 🛠️ CLI Workflow (Schema Evolution)
 
 PersistX ships with a **Node-only CLI**.
 
@@ -285,7 +288,7 @@ persistx migrate --form petProfile --input old-data.json --apply
 
 ---
 
-## Runtime Safety Guarantees
+## 🛡️ Runtime Safety Guarantees
 
 PersistX guarantees:
 
@@ -299,7 +302,7 @@ If data reaches your adapter, it is **safe by construction**.
 
 ---
 
-## Browser vs Node Boundary
+## 🔍 Browser vs Node Boundary
 
 - `@persistx/core` is **browser-safe**
 - no `fs`, `path`, or Node APIs
@@ -313,7 +316,7 @@ This boundary is intentional.
 
 ---
 
-## Why not Zod / Prisma / Drizzle?
+## 🔄 Why not Zod / Prisma / Drizzle?
 
 PersistX does **not replace** these tools. It solves a _different problem_.
 
@@ -343,35 +346,7 @@ PersistX exists because **schema evolution is a runtime problem**, not just a co
 
 ---
 
-## Runtime Safety Guarantees
-
-PersistX guarantees:
-
-- ❌ unknown fields are rejected (unless explicitly allowed)
-- ❌ invalid payloads never reach storage
-- ❌ silent renames never happen
-- ✅ schema changes are explicit and reviewable
-- ✅ adapters receive only validated, mapped data
-
-If data reaches your adapter, it is **safe by construction**.
-
----
-
-## Browser vs Node Boundary
-
-- `@persistx/core` is **browser-safe**
-- no `fs`, `path`, or Node APIs
-- safe for Vite, Webpack, and edge runtimes
-
-CLI tooling lives in:
-
-- `@persistx/cli` (Node-only)
-
-This boundary is intentional.
-
----
-
-## What PersistX Is NOT
+## 🚫 What PersistX Is NOT
 
 PersistX is **not**:
 
@@ -384,7 +359,7 @@ PersistX is a **contract layer**.
 
 ---
 
-## When Should You Use PersistX?
+## ✅ When Should You Use PersistX?
 
 PersistX is a good fit when:
 
@@ -398,7 +373,7 @@ If your schema is static and tightly coupled to one backend, PersistX may be unn
 
 ---
 
-## Adapter Example
+## 🔌 Adapter Example
 
 ```ts
 import type { PersistxAdapter } from "@persistx/core";
@@ -428,7 +403,7 @@ Adapters stay simple because PersistX does the hard work.
 
 ---
 
-## Who Is It For?
+## 👥 Who Is It For?
 
 PersistX is for teams that:
 
@@ -437,12 +412,12 @@ PersistX is for teams that:
 - care deeply about data integrity
 - want evolution without chaos
 
-If your schema never changes, you don’t need PersistX.
+If your schema never changes, you don't need PersistX.
 If it does — you probably already do.
 
 ---
 
-## Status
+## 📊 Status
 
 - **Core**: Stable
 - **Demo**: Production-ready
@@ -451,14 +426,16 @@ If it does — you probably already do.
 
 ---
 
-## License
+## 📄 License
 
 MIT
 
 ---
 
-## Philosophy
+## 💭 Philosophy
 
 > **"Schema evolution should be boring, safe, and reviewable."**
 
 PersistX makes that real by providing a robust contract layer that protects your data as your applications evolve, ensuring that both new and legacy clients can coexist without breaking your persistence layer.
+
+---
