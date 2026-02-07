@@ -7,6 +7,11 @@ import type { Tutorial, UiField } from "../../tutorial/types";
  *
  * DATA ONLY — no UI, no React.
  * Engine + Runner interpret this.
+ *
+ * Teaching pattern:
+ *  - hint   = Do (what the learner should click/do now)
+ *  - explain[0] = Why (one-liner used by TutorialControls)
+ *  - expect.shouldSee = Expect (what the learner should observe)
  */
 
 const baseFieldsV1: UiField[] = [
@@ -47,6 +52,11 @@ export const petTutorial: Tutorial = {
                     petName: "Fluffy",
                     petType: "Cat",
                 },
+                "v1 payload (with unknown key)": {
+                    petName: "Fluffy",
+                    petType: "Cat",
+                    extraFieldShouldFail: "nope",
+                },
             },
         },
     },
@@ -57,18 +67,17 @@ export const petTutorial: Tutorial = {
         // ============================================================
         {
             id: "baseline",
-            title: "Story 1 — Version 1 (happy path)",
+            title: "Baseline",
             description: "UI and schema match. Saving should just work.",
             steps: [
                 {
                     id: "s1-intro",
-                    title: "Welcome",
-                    hint:
-                        "You have a pet form and a PersistX schema (v1). Save a valid payload and see what reaches the adapter.",
+                    title: "Contract in action (happy path)",
+                    hint: "Do: Click Analyze, then Save.",
                     explain: [
-                        "PersistX acts as a schema contract.",
-                        "When UI and schema match, PersistX stays out of your way.",
+                        "Why: PersistX enforces a schema contract so only valid, mapped data reaches storage.",
                         "Your app calls one line: persistx.submit(formKey, payload, { uid }).",
+                        "Analyze lets you preview: validate → normalize → map → unknown detection.",
                     ],
                     enter: {
                         formKey: "petProfile",
@@ -82,16 +91,15 @@ export const petTutorial: Tutorial = {
                             petName: "Fluffy",
                             petType: "Cat",
                         },
-                        lock: {
-                            formKey: true,
-                        },
+                        lock: { formKey: true },
                     },
                     actions: [
                         {
                             id: "analyze",
-                            label: "Analyze",
+                            label: "Preview mapping (Analyze)",
                             kind: "analyze",
                             tone: "secondary",
+                            help: "See normalized + mapped output before saving.",
                         },
                         {
                             id: "save",
@@ -99,14 +107,22 @@ export const petTutorial: Tutorial = {
                             kind: "submit",
                             tone: "primary",
                             expect: "success",
+                            help: "PersistX validates + maps the payload, then the adapter stores it.",
                         },
                         {
                             id: "next",
-                            label: "Next",
+                            label: "Continue",
                             kind: "next",
                             tone: "ghost",
                         },
                     ],
+                    expect: {
+                        shouldSee: [
+                            "Analyze Output shows mapped keys for schema v1",
+                            "Submit Output shows adapter request + DB snapshot",
+                            "No unknownInPayload keys when payload matches schema",
+                        ],
+                    },
                 },
             ],
         },
@@ -116,13 +132,17 @@ export const petTutorial: Tutorial = {
         // ============================================================
         {
             id: "add-field",
-            title: "Story 2 — UI changes faster than schema",
-            description:
-                "Simulate adding a new UI field. PersistX blocks it until the schema is updated.",
+            title: "Add field",
+            description: "UI changes faster than schema. PersistX blocks drift until schema updates.",
             steps: [
                 {
                     id: "s2-setup",
-                    title: "Start from schema v1",
+                    title: "Add a new UI field",
+                    hint: "Do: Click “Add UI field: age”.",
+                    explain: [
+                        "Why: Frontend changes are fast, but the schema contract must be updated intentionally.",
+                        "PersistX prevents silent schema drift (accidentally writing new shapes to DB).",
+                    ],
                     enter: {
                         formKey: "petProfile",
                         schemaRef: {
@@ -135,16 +155,15 @@ export const petTutorial: Tutorial = {
                             petName: "Fluffy",
                             petType: "Cat",
                         },
-                        lock: {
-                            formKey: true,
-                        },
+                        lock: { formKey: true },
                     },
                     actions: [
                         {
                             id: "add-age-ui",
                             label: "Add UI field: age",
                             kind: "applyUiPatch",
-                            tone: "secondary",
+                            tone: "primary",
+                            help: "Simulates a UI change. Schema is still v1.",
                             patch: {
                                 op: "addField",
                                 field: {
@@ -152,76 +171,106 @@ export const petTutorial: Tutorial = {
                                     label: "Age",
                                     type: "number",
                                     placeholder: "3",
-                                    note: "New UI field (not in schema v1).",
+                                    note: "New UI field (NOT in schema v1).",
                                 },
                                 afterKey: "petType",
                             },
                         },
                         {
                             id: "next",
-                            label: "Next",
+                            label: "Continue",
                             kind: "next",
                             tone: "ghost",
                         },
                     ],
+                    expect: {
+                        shouldSee: [
+                            "UI Form now includes the Age field",
+                            "Schema panel is still v1 (no age field yet)",
+                        ],
+                    },
                 },
                 {
                     id: "s2-break",
-                    title: "Save now fails",
-                    hint:
-                        "Try saving with the new UI field. PersistX should reject it.",
+                    title: "Contract breaks (expected failure)",
+                    hint: "Do: Click Save (expected to fail).",
+                    explain: [
+                        "Why: Schema v1 does not allow the new key, so PersistX rejects the submission.",
+                        "This makes changes reviewable: schema must evolve intentionally.",
+                    ],
                     actions: [
                         {
                             id: "analyze",
-                            label: "Analyze",
+                            label: "Preview mapping (Analyze)",
                             kind: "analyze",
                             tone: "secondary",
+                            help: "Notice unknownInPayload includes age under schema v1.",
                         },
                         {
                             id: "save",
-                            label: "Save (expect error)",
+                            label: "Save (expected to fail)",
                             kind: "submit",
-                            tone: "primary",
+                            tone: "danger",
                             expect: "error",
                             expectedErrorContains: "age",
+                            help: "PersistX blocks unknown keys when allowUnknownFields=false.",
                         },
                         {
                             id: "next",
-                            label: "Next",
+                            label: "Continue",
                             kind: "next",
                             tone: "ghost",
                         },
                     ],
+                    expect: {
+                        shouldSee: [
+                            "Result shows an error mentioning age (unknown / not allowed)",
+                            "Analyze Output shows unknownInPayload includes age",
+                        ],
+                    },
                 },
                 {
                     id: "s2-fix",
-                    title: "Fix: update schema to v2",
+                    title: "Fix by updating schema (v2)",
+                    hint: "Do: Click “Update schema to v2”, then Save again.",
+                    explain: [
+                        "Why: Adding a new field is safe when you bump schema and include it explicitly.",
+                        "Old clients still work; new clients can send age.",
+                    ],
                     actions: [
                         {
                             id: "set-schema-v2",
-                            label: "Update schema to v2",
+                            label: "Update schema to v2 (allow age)",
                             kind: "setSchema",
-                            tone: "secondary",
+                            tone: "primary",
                             schemaRef: {
                                 kind: "snapshot",
                                 file: "schema.v2.add-age.json",
                                 versionLabel: "v2",
                             },
+                            help: "Schema v2 includes age, so PersistX accepts it.",
                         },
                         {
                             id: "save",
                             label: "Save again",
                             kind: "submit",
-                            tone: "primary",
+                            tone: "secondary",
                             expect: "success",
+                            help: "Now the same payload should pass and persist.",
                         },
                         {
                             id: "next",
-                            label: "Next",
+                            label: "Continue",
                             kind: "next",
                             tone: "ghost",
                         },
                     ],
+                    expect: {
+                        shouldSee: [
+                            "Schema panel shows v2 with age",
+                            "Save succeeds and DB snapshot includes age",
+                        ],
+                    },
                 },
             ],
         },
@@ -231,13 +280,16 @@ export const petTutorial: Tutorial = {
         // ============================================================
         {
             id: "rename-field",
-            title: "Story 3 — Rename a field safely",
-            description:
-                "Renames require aliases. PersistX forces you to be explicit.",
+            title: "Rename field",
+            description: "Renames require aliases. PersistX forces you to be explicit.",
             steps: [
                 {
                     id: "s3-setup",
-                    title: "Start from schema v2",
+                    title: "Baseline on v2",
+                    hint: "Do: Click Save (baseline).",
+                    explain: [
+                        "Why: We start from a known-good state before renaming anything.",
+                    ],
                     enter: {
                         formKey: "petProfile",
                         schemaRef: {
@@ -251,35 +303,46 @@ export const petTutorial: Tutorial = {
                             petType: "Cat",
                             age: 3,
                         },
-                        lock: {
-                            formKey: true,
-                        },
+                        lock: { formKey: true },
                     },
                     actions: [
                         {
                             id: "save",
                             label: "Save (baseline)",
                             kind: "submit",
-                            tone: "secondary",
+                            tone: "primary",
                             expect: "success",
+                            help: "Everything matches schema v2.",
                         },
                         {
                             id: "next",
-                            label: "Next",
+                            label: "Continue",
                             kind: "next",
                             tone: "ghost",
                         },
                     ],
+                    expect: {
+                        shouldSee: [
+                            "Save succeeds on schema v2",
+                            "DB snapshot uses petType (v2 key)",
+                        ],
+                    },
                 },
                 {
                     id: "s3-rename-ui",
-                    title: "Rename UI field: petType → type",
+                    title: "Rename in UI (break the contract)",
+                    hint: "Do: Click “Rename field in UI”, then Save (expected to fail).",
+                    explain: [
+                        "Why: Renames are dangerous because different app versions may send different keys.",
+                        "PersistX will not guess renames — you must define aliases explicitly.",
+                    ],
                     actions: [
                         {
                             id: "rename-ui",
-                            label: "Rename field in UI",
+                            label: "Rename field in UI: petType → type",
                             kind: "applyUiPatch",
-                            tone: "secondary",
+                            tone: "primary",
+                            help: "Simulates changing the frontend field name only.",
                             patch: {
                                 op: "renameField",
                                 from: "petType",
@@ -289,48 +352,71 @@ export const petTutorial: Tutorial = {
                         },
                         {
                             id: "analyze",
-                            label: "Analyze",
+                            label: "Preview mapping (Analyze)",
                             kind: "analyze",
                             tone: "secondary",
+                            help: "Notice type is unknown under schema v2.",
                         },
                         {
                             id: "save",
-                            label: "Save (expect error)",
+                            label: "Save (expected to fail)",
                             kind: "submit",
-                            tone: "primary",
+                            tone: "danger",
                             expect: "error",
-                            // ✅ FIXED: schema v2 rejects "type", not missing petType
                             expectedErrorContains: "type",
+                            help: "Schema v2 doesn't allow type yet, so PersistX rejects it.",
                         },
                         {
                             id: "next",
-                            label: "Next",
+                            label: "Continue",
                             kind: "next",
                             tone: "ghost",
                         },
                     ],
+                    expect: {
+                        shouldSee: [
+                            "Result shows an error mentioning type",
+                            "Analyze Output shows unknownInPayload includes type",
+                            "Schema is still v2 (petType is canonical)",
+                        ],
+                    },
                 },
                 {
                     id: "s3-fix",
-                    title: "Apply alias via schema v3",
+                    title: "Fix with alias (schema v3)",
+                    hint: "Do: Apply alias schema v3, then Save again.",
+                    explain: [
+                        "Why: Aliases let old clients keep sending petType while new clients send type.",
+                        "PersistX stores a single canonical shape (type) to avoid mixed database schemas.",
+                    ],
                     actions: [
+                        {
+                            id: "copy-cli",
+                            label: "Copy CLI: persistx diff --apply",
+                            kind: "copyCli",
+                            tone: "ghost",
+                            command: "persistx diff --file ./schema.json --apply",
+                            help: "Typical workflow: diff → review → apply aliases for renames.",
+                        },
                         {
                             id: "set-schema-v3",
                             label: "Apply alias (schema v3)",
                             kind: "setSchema",
-                            tone: "secondary",
+                            tone: "primary",
                             schemaRef: {
                                 kind: "snapshot",
                                 file: "schema.v3.rename-with-alias.json",
                                 versionLabel: "v3",
                             },
+                            help: "Schema v3 supports type and aliases petType.",
                         },
                         {
                             id: "save",
                             label: "Save again",
                             kind: "submit",
-                            tone: "primary",
+                            tone: "secondary",
                             expect: "success",
+                            help: "Now the UI payload should map and save successfully.",
                         },
                         {
                             id: "next",
@@ -339,6 +425,13 @@ export const petTutorial: Tutorial = {
                             tone: "ghost",
                         },
                     ],
+                    expect: {
+                        shouldSee: [
+                            "Schema panel shows v3 with type + alias petType",
+                            "Save succeeds",
+                            "DB snapshot uses canonical key type (not petType)",
+                        ],
+                    },
                 },
             ],
         },

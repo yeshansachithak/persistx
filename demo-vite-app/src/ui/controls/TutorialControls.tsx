@@ -59,8 +59,14 @@ export default function TutorialControls() {
                     {/* Why line (teaching) */}
                     {step.explain?.length ? (
                         <div className="mt-2 text-xs text-zinc-600">
-                            <span className="font-semibold text-zinc-700">Why:</span>{" "}
-                            {step.explain[0]}
+                            <span className="font-semibold text-zinc-700">{step.explain[0]}</span>
+                            {step.explain?.length > 1 && (
+                                <ul className="mt-1 list-disc pl-4">
+                                    {step.explain.slice(1).map((t, i) => (
+                                        <li key={i}>{t}</li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
                     ) : null}
                 </div>
