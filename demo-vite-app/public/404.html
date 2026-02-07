@@ -1,30 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <title>PersistX Demo</title>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./persistx-256.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PersistX Interactive Tutorial Demo</title>
+
+    <!-- SPA redirect for GitHub Pages (rafgraph/spa-github-pages) -->
     <script>
-        // Single Page Apps for GitHub Pages
-        // MIT License
-        // https://github.com/rafgraph/spa-github-pages
-        // This script checks to see if a redirect is present in the query string,
-        // converts it back into the correct url and adds it to the
-        // browser's history using window.history.replaceState(...),
-        // which won't cause the browser to attempt to load the new url.
-        // When the single page app is loaded further down in this file,
-        // the correct url will be waiting in the browser's history for
-        // the single page app to route accordingly.
         (function (l) {
-            if (l.search[1] === '/') {
-                var decoded = l.search.slice(1).split('&').map(function (s) {
-                    return s.replace(/~and~/g, '&')
-                }).join('?');
-                window.history.replaceState(null, null,
+            if (l.search && l.search[1] === "/") {
+                var decoded = l.search
+                    .slice(1)
+                    .split("&")
+                    .map(function (s) {
+                        return s.replace(/~and~/g, "&");
+                    })
+                    .join("?");
+                window.history.replaceState(
+                    null,
+                    null,
                     l.pathname.slice(0, -1) + decoded + l.hash
                 );
             }
-        }(window.location))
+        })(window.location);
     </script>
 </head>
 
@@ -34,8 +34,24 @@
         <p>JavaScript is required to run this demo.</p>
         <p>Please enable JavaScript in your browser settings.</p>
     </noscript>
+
     <div id="root"></div>
-    <script type="module" src="/persistx/index.js"></script>
+
+    <!-- IMPORTANT:
+         Do NOT hardcode /persistx/index.js.
+         Vite will inject the correct built assets at runtime by serving index.html.
+         For 404.html, we just need to load the SPA entry the same way index.html would.
+         The simplest reliable approach is to redirect to the app root. -->
+    <script>
+        // If we reached 404.html directly, send to the SPA entry (base path)
+        // Keeping it client-side avoids double-load loops.
+        var base = "/persistx/";
+        if (!window.location.pathname.startsWith(base)) base = "/";
+        // If already at /persistx/404.html, go to /persistx/
+        if (window.location.pathname.endsWith("/404.html")) {
+            window.location.replace(base);
+        }
+    </script>
 </body>
 
 </html>

@@ -28,19 +28,12 @@ export default function FourPanelLayout({ a, b, c, d }: FourPanelLayoutProps) {
         <div className="grid gap-4">
             {/* Row 1: UI + Schema + Result (do NOT stretch) */}
             <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
-                <section className="lg:col-span-4">
+                <section className="lg:col-span-6">
                     <PanelShell title="UI Form" meta="Input" variant="top">
                         {a}
                     </PanelShell>
                 </section>
-
-                <section className="lg:col-span-4">
-                    <PanelShell title="Schema Contract" meta="Contract" variant="top">
-                        {c}
-                    </PanelShell>
-                </section>
-
-                <section className="lg:col-span-4">
+                <section className="lg:col-span-6">
                     <PanelShell title="Result" meta="Output" variant="top">
                         {d}
                     </PanelShell>
@@ -48,11 +41,19 @@ export default function FourPanelLayout({ a, b, c, d }: FourPanelLayoutProps) {
             </div>
 
             {/* Row 2: Code (full width) */}
-            <section>
-                <PanelShell title="Developer View" meta="Code" variant="bottom">
-                    {b}
-                </PanelShell>
-            </section>
+            <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
+                <section className="lg:col-span-6">
+                    <PanelShell title="Schema Contract" meta="Contract" variant="bottom">
+                        {c}
+                    </PanelShell>
+                </section>
+                <section className="lg:col-span-6">
+                    <PanelShell title="Developer Easy" meta="Code" variant="bottom">
+                        {b}
+                    </PanelShell>
+                </section>
+            </div>
+
         </div>
     );
 }

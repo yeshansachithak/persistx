@@ -1,16 +1,16 @@
 # PersistX
 
-**PersistX** is a schema-driven persistence engine designed to make form submissions, versioning, and data evolution *safe, explicit, and predictable*.
+**PersistX** is a schema-driven persistence engine designed to make form submissions, versioning, and data evolution **safe, explicit, and predictable**.
 
 It sits between your **frontend forms** and **backend storage**, enforcing:
 
-* schema validation
-* versioned writes
-* safe field renames
-* forward-compatible migrations
+- schema validation
+- versioned writes
+- safe field renames (via aliases)
+- forward-compatible migrations
 
-PersistX is **not an ORM** and **not a database**.
-It is a *persistence contract*.
+PersistX is **not an ORM** and **not a database**.  
+It is a **persistence contract**.
 
 ---
 
@@ -18,42 +18,62 @@ It is a *persistence contract*.
 
 Most systems break when forms evolve:
 
-* fields get renamed
-* payloads change shape
-* old clients still send old data
+- fields get renamed
+- payloads change shape
+- old clients keep sending old data
 
 PersistX solves this by making **schema versioning a first-class concept**.
 
 You get:
 
-* explicit `formKey` + `version`
-* safe upserts with controlled IDs
-* human-reviewed diffs
-* deterministic migrations
+- explicit `formKey` + `schemaVersion`
+- safe upserts with controlled document IDs
+- human-reviewable schema diffs
+- deterministic, explicit migrations
 
-No magic. No silent data loss.
+No magic.  
+No silent data loss.  
+No guessing.
 
 ---
 
-## Try the Demo (Recommended)
+## Try the Interactive Demo (Recommended)
 
-The fastest way to understand PersistX is to run the interactive demo.
+The fastest way to understand PersistX is the interactive demo.
 
 ```bash
 yarn install
 yarn workspace demo-vite-app dev
 ```
 
-What the demo shows:
+What the demo teaches:
 
-* **Step 1 — Configure**: pick `formKey`, schema version, and `context.uid`
-* **Step 2 — Payload**: paste legacy or modern JSON payloads
-* **Step 3 — Analyze**: see validation, normalization, alias mapping, and unknown-field detection
-* **Step 4 — Submit**: inspect the exact data sent to `adapter.save()` and the stored DB snapshot
+1. **Configure**
+   - choose `formKey`
+   - choose schema version
+   - set `context.uid`
 
-The demo mirrors the internal pipeline:
+2. **Edit Payload**
+   - form mode or raw JSON
+   - simulate legacy or new clients
 
-> validate → normalize → map → save
+3. **Analyze**
+   - validation result
+   - normalized payload
+   - alias mapping
+   - unknown-field detection
+
+4. **Submit**
+   - inspect the exact adapter request
+   - view the stored DB snapshot
+
+The demo mirrors the PersistX pipeline exactly:
+
+```
+validate → normalize → map → save
+```
+
+If you understand the demo, you understand PersistX.
 
 ---
 
@@ -63,10 +83,10 @@ The demo mirrors the internal pipeline:
 
 A **Form Definition** describes:
 
-* what data is allowed
-* how it is validated
-* where it is stored
-* how document IDs are generated
+- what data is allowed
+- how it is validated
+- how IDs are generated
+- how writes behave (create / update / upsert)
 
 Example (`schema.json`):
 
@@ -82,8 +102,16 @@ Example (`schema.json`):
       "writeMode": "upsert",
       "allowUnknownFields": false,
       "fields": [
-        { "key": "petName", "type": "string", "rules": [{ "kind": "required" }] },
-        { "key": "petType", "type": "string", "rules": [{ "kind": "required" }] },
+        {
+          "key": "petName",
+          "type": "string",
+          "rules": [{ "kind": "required" }]
+        },
+        {
+          "key": "petType",
+          "type": "string",
+          "rules": [{ "kind": "required" }]
+        },
         { "key": "age", "type": "number", "nullable": true }
       ]
     }
@@ -104,26 +132,29 @@ const registry = createInMemoryRegistry(definitions);
 const persistx = createPersistx({ adapter, registry });
 ```
 
-You then submit payloads:
+Submit payloads:
 
 ```ts
 await persistx.submit("petProfile", payload, { uid: "user-001" });
 ```
 
-PersistX will:
+PersistX guarantees the following order:
 
 1. resolve schema version
 2. validate payload
 3. normalize values
-4. map fields (apply aliases, drop unknowns)
-5. resolve document ID
-6. call `adapter.save()`
+4. map fields (aliases, canonical keys)
+5. detect unknown fields
+6. resolve document ID
+7. call `adapter.save()`
+
+Adapters **never see invalid or unmapped data**.
 
 ---
 
-## CLI Workflow
+## CLI Workflow (Schema Evolution)
 
-PersistX ships with a **Node-only CLI** for managing schemas and migrations.
+PersistX ships with a **Node-only CLI** for managing schemas safely.
 
 ### 1. Initialize Schema
 
@@ -137,23 +168,19 @@ Creates:
 definitions/schema.json
 ```
 
-A single-file schema (recommended).
+A single-file schema is the recommended workflow.
 
 ---
 
 ### 2. Evolve a Form
 
-Example: rename `petType` → `type`, bump version to `2`.
+Example: rename `petType` → `type`, bump version.
 
 ```json
 {
   "formKey": "petProfile",
   "version": 2,
-  "fields": [
-    { "key": "petName" },
-    { "key": "type" },
-    { "key": "age" }
-  ]
+  "fields": [{ "key": "petName" }, { "key": "type" }, { "key": "age" }]
 }
 ```
 
@@ -169,10 +196,10 @@ Output:
 
 ```
 === petProfile: v1 -> v2 ===
-Map "petType" -> "type" ? (score=0.65)
+Map "petType" -> "type" ? (confidence=0.65)
 ```
 
-Apply aliases:
+Apply aliases explicitly:
 
 ```bash
 persistx diff --file definitions/schema.json --apply
@@ -187,9 +214,13 @@ Result:
 }
 ```
 
+PersistX **never guesses renames at runtime**.
+
 ---
 
 ### 4. Migrate Existing Data
+
+Preview migration:
 
 ```bash
 persistx migrate \
@@ -197,9 +228,7 @@ persistx migrate \
   --input payload.json
 ```
 
-Preview output.
-
-Apply:
+Apply migration:
 
 ```bash
 persistx migrate \
@@ -220,33 +249,38 @@ payload.json.migrated.json
 
 PersistX guarantees:
 
-* ❌ unknown fields are dropped (unless allowed)
-* ❌ invalid payloads never reach storage
-* ❌ silent renames never happen
-* ✅ all migrations are explicit
-* ✅ adapters never see unvalidated data
+- ❌ unknown fields are rejected (unless explicitly allowed)
+- ❌ invalid payloads never reach storage
+- ❌ silent renames never happen
+- ✅ schema changes are explicit and reviewable
+- ✅ adapters receive only validated, mapped data
+
+If data reaches your adapter, it is **safe by construction**.
 
 ---
 
 ## Browser vs Node Boundary
 
-* `@persistx/core` is **browser-safe**
-* No `fs`, `path`, or Node APIs
-* CLI tools live in `@persistx/cli`
+- `@persistx/core` is **browser-safe**
+- no `fs`, `path`, or Node APIs
+- safe for Vite, Webpack, and edge runtimes
 
-This ensures:
+CLI tooling lives in:
 
-* safe Vite / Webpack builds
-* no accidental server-only imports
+- `@persistx/cli` (Node-only)
+
+This boundary is intentional.
 
 ---
 
 ## What PersistX Is NOT
 
-* ❌ ORM
-* ❌ Database
-* ❌ Form renderer
-* ❌ Backend framework
+PersistX is **not**:
+
+- ❌ an ORM
+- ❌ a database
+- ❌ a form renderer
+- ❌ a backend framework
 
 PersistX is a **contract layer**.
 
@@ -256,27 +290,27 @@ PersistX is a **contract layer**.
 
 PersistX is a good fit when:
 
-* you have **multiple clients** (web, mobile, kiosk, legacy) submitting data
-* your **schemas evolve over time** and old clients must keep working
-* you want **explicit control** over renames, versions, and migrations
-* you use **document-style storage** (Firestore, MongoDB, KV stores, REST APIs)
+- you have **multiple clients** (web, mobile, kiosk, legacy)
+- schemas evolve but **old clients must keep working**
+- renames must be **explicit and safe**
+- you use **document-style storage**
+  (Firestore, MongoDB, KV stores, REST APIs)
 
-If your data model is static and tightly coupled to a single backend, PersistX may be unnecessary.
+If your schema is static and tightly coupled to one backend, PersistX may be unnecessary.
 
 ---
 
 ## Adapter Example
 
-PersistX adapters are intentionally small and explicit. A typical Firestore-style adapter looks like:
+A minimal Firestore-style adapter:
 
 ```ts
 import type { PersistxAdapter } from "@persistx/core";
 
 const adapter: PersistxAdapter = {
   async save(req) {
-    const id = req.idStrategy.kind === "fixed"
-      ? req.idStrategy.id
-      : crypto.randomUUID();
+    const id =
+      req.idStrategy.kind === "fixed" ? req.idStrategy.id : crypto.randomUUID();
 
     await db
       .collection(req.collection)
@@ -288,21 +322,22 @@ const adapter: PersistxAdapter = {
       id,
       mode: req.mode,
       schemaVersion: req.schemaVersion,
-      savedAt: new Date().toISOString()
+      savedAt: new Date().toISOString(),
     };
-  }
+  },
 };
 ```
 
-Adapters **never receive invalid or unmapped data** — PersistX enforces that contract.
+Adapters stay simple because PersistX does the hard work.
 
 ---
 
 ## Status
 
-* Core: stable
-* CLI: evolving
-* Adapters: in progress
+- Core: **stable**
+- Demo: **production-ready**
+- CLI: evolving
+- Adapters: in progress
 
 ---
 
@@ -314,6 +349,4 @@ MIT
 
 ## Philosophy
 
-> "Schema evolution should be boring, safe, and reviewable."
-
-PersistX exists to make that true.
+> **“Schema evolution should be boring, safe, and reviewable.”**
