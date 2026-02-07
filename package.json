@@ -12,7 +12,7 @@
   },
   "scripts": {
     "fresh-start": "git checkout --orphan new-branch && git add -A && git commit -m 'Initial commit'",
-    "build:order": "yarn workspace @persistx/core build && yarn workspace @persistx/cli build && yarn workspace @persistx/adapter-firestore build && yarn workspace @persistx/validator-zod build && yarn workspace demo-vite build",
+    "build:order": "yarn workspace @persistx/core build && yarn workspace @persistx/cli build && yarn workspace @persistx/adapter-firestore build && yarn workspace @persistx/validator-zod build && yarn workspace demo-vite-app build",
     "build": "yarn workspaces foreach -Apt run build",
     "dev": "yarn workspaces foreach -Apt run dev",
     "test": "yarn workspaces foreach -At run test",
@@ -22,10 +22,5 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.3"
-  },
-  "resolutions": {
-    "esbuild": "0.24.2",
-    "@esbuild/darwin-x64": "0.24.2"
-  },
-  "packageManager": "yarn@4.12.0"
+  }
 }
