@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-output="project_dump.txt"
+output="dump_project.txt"
 
 echo "Generating project dump to $output ..."
 echo "======================================"
