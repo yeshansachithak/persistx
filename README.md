@@ -48,11 +48,44 @@ The demo is the fastest way to understand PersistX. It walks you through:
 2. **Schema mismatch** (UI changes faster than schema)
 3. **Safe rename using aliases**
 
-You will _see_:
+You can:
 
-- payloads fail on purpose
-- renames break without aliases
-- canonical DB shape remain clean
+- switch between **form mode** and **raw JSON**
+- simulate **legacy vs modern clients**
+- preview **alias mapping and unknown fields**
+- inspect the **exact adapter request**
+- view the **stored DB snapshot**
+
+This is not a mock — it's the real engine.
+
+---
+
+### What the demo teaches
+
+1. **Configure**
+   - choose `formKey`
+   - choose schema version
+   - set `context.uid`
+
+2. **Edit Payload**
+   - form mode or raw JSON
+   - simulate legacy or new clients
+
+3. **Analyze**
+   - validation result
+   - normalized payload
+   - alias mapping
+   - unknown-field detection
+
+4. **Submit**
+   - inspect the exact adapter request
+   - view the stored DB snapshot
+
+The interactive tutorial mirrors the PersistX pipeline exactly:
+
+```
+validate → normalize → map → save
+```
 
 If you understand the demo, you understand PersistX.
 
@@ -136,26 +169,6 @@ You get:
 No magic.  
 No silent data loss.  
 No guessing.
-
----
-
-## What the Demo Teaches
-
-The interactive tutorial mirrors the PersistX pipeline exactly:
-
-```
-validate → normalize → map → save
-```
-
-You can:
-
-- switch between **form mode** and **raw JSON**
-- simulate **legacy vs modern clients**
-- preview **alias mapping and unknown fields**
-- inspect the **exact adapter request**
-- view the **stored DB snapshot**
-
-This is not a mock — it's the real engine.
 
 ---
 
@@ -317,6 +330,45 @@ PersistX does **not replace** these tools. It solves a _different problem_.
 
 It complements Zod and ORMs — it doesn't compete with them.
 
+## The Core Difference (Summary)
+
+| Tool         | Validates payloads | Handles persistence | Handles evolution | Protects legacy clients |
+| ------------ | ------------------ | ------------------- | ----------------- | ----------------------- |
+| Zod          | ✅ Yes             | ❌ No               | ❌ No             | ❌ No                   |
+| Prisma       | ❌ No              | ✅ Yes              | ⚠️ Partial        | ❌ No                   |
+| Drizzle      | ❌ No              | ✅ Yes              | ⚠️ Partial        | ❌ No                   |
+| **PersistX** | ✅ Yes             | ✅ Yes              | ✅ Yes            | ✅ Yes                  |
+
+PersistX exists because **schema evolution is a runtime problem**, not just a compile-time one.
+
+---
+
+## Runtime Safety Guarantees
+
+PersistX guarantees:
+
+- ❌ unknown fields are rejected (unless explicitly allowed)
+- ❌ invalid payloads never reach storage
+- ❌ silent renames never happen
+- ✅ schema changes are explicit and reviewable
+- ✅ adapters receive only validated, mapped data
+
+If data reaches your adapter, it is **safe by construction**.
+
+---
+
+## Browser vs Node Boundary
+
+- `@persistx/core` is **browser-safe**
+- no `fs`, `path`, or Node APIs
+- safe for Vite, Webpack, and edge runtimes
+
+CLI tooling lives in:
+
+- `@persistx/cli` (Node-only)
+
+This boundary is intentional.
+
 ---
 
 ## What PersistX Is NOT
@@ -373,6 +425,20 @@ const adapter: PersistxAdapter = {
 ```
 
 Adapters stay simple because PersistX does the hard work.
+
+---
+
+## Who Is It For?
+
+PersistX is for teams that:
+
+- ship multiple clients
+- cannot force synchronized upgrades
+- care deeply about data integrity
+- want evolution without chaos
+
+If your schema never changes, you don’t need PersistX.
+If it does — you probably already do.
 
 ---
 
