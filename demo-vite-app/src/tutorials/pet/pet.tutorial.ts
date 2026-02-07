@@ -9,8 +9,8 @@ import type { Tutorial, UiField } from "../../tutorial/types";
  * Engine + Runner interpret this.
  *
  * Teaching pattern:
- *  - hint   = Do (what the learner should click/do now)
- *  - explain[0] = Why (one-liner used by TutorialControls)
+ *  - hint          = Do (what the learner should do now)
+ *  - explain[0]    = Why (one-liner used by TutorialControls)
  *  - expect.shouldSee = Expect (what the learner should observe)
  */
 
@@ -133,7 +133,8 @@ export const petTutorial: Tutorial = {
         {
             id: "add-field",
             title: "Add field",
-            description: "UI changes faster than schema. PersistX blocks drift until schema updates.",
+            description:
+                "UI changes faster than schema. PersistX blocks drift until schema updates.",
             steps: [
                 {
                     id: "s2-setup",
@@ -288,7 +289,7 @@ export const petTutorial: Tutorial = {
                     title: "Baseline on v2",
                     hint: "Do: Click Save (baseline).",
                     explain: [
-                        "Why: We start from a known-good state before renaming anything.",
+                        "Why: Start from a known-good state before renaming anything.",
                     ],
                     enter: {
                         formKey: "petProfile",
@@ -328,13 +329,13 @@ export const petTutorial: Tutorial = {
                         ],
                     },
                 },
+
                 {
                     id: "s3-rename-ui",
                     title: "Rename in UI (break the contract)",
-                    hint: "Do: Click “Rename field in UI”, then Save (expected to fail).",
+                    hint: "Do: Click “Rename field in UI”, then Analyze, then Save (expected to fail).",
                     explain: [
-                        "Why: Renames are dangerous because different app versions may send different keys.",
-                        "PersistX will not guess renames — you must define aliases explicitly.",
+                        "Why: Renames are dangerous — different app versions may send different keys. PersistX will not guess; you must add an alias.",
                     ],
                     actions: [
                         {
@@ -342,7 +343,7 @@ export const petTutorial: Tutorial = {
                             label: "Rename field in UI: petType → type",
                             kind: "applyUiPatch",
                             tone: "primary",
-                            help: "Simulates changing the frontend field name only.",
+                            help: "Simulates changing the frontend field name only (schema still v2).",
                             patch: {
                                 op: "renameField",
                                 from: "petType",
@@ -355,7 +356,7 @@ export const petTutorial: Tutorial = {
                             label: "Preview mapping (Analyze)",
                             kind: "analyze",
                             tone: "secondary",
-                            help: "Notice type is unknown under schema v2.",
+                            help: "Notice type becomes unknown under schema v2.",
                         },
                         {
                             id: "save",
@@ -375,19 +376,19 @@ export const petTutorial: Tutorial = {
                     ],
                     expect: {
                         shouldSee: [
+                            "Visual Diff shows petType → type",
+                            "Analyze Output unknownInPayload includes type",
                             "Result shows an error mentioning type",
-                            "Analyze Output shows unknownInPayload includes type",
-                            "Schema is still v2 (petType is canonical)",
                         ],
                     },
                 },
+
                 {
                     id: "s3-fix",
                     title: "Fix with alias (schema v3)",
-                    hint: "Do: Apply alias schema v3, then Save again.",
+                    hint: "Do: Apply schema v3 (alias), then Analyze, then Save again.",
                     explain: [
-                        "Why: Aliases let old clients keep sending petType while new clients send type.",
-                        "PersistX stores a single canonical shape (type) to avoid mixed database schemas.",
+                        "Why: Aliases keep old clients compatible while PersistX stores a single canonical key (type), preventing mixed database schemas.",
                     ],
                     actions: [
                         {
@@ -408,7 +409,14 @@ export const petTutorial: Tutorial = {
                                 file: "schema.v3.rename-with-alias.json",
                                 versionLabel: "v3",
                             },
-                            help: "Schema v3 supports type and aliases petType.",
+                            help: "Schema v3 supports canonical type and accepts petType as an alias.",
+                        },
+                        {
+                            id: "analyze",
+                            label: "Preview mapping (Analyze)",
+                            kind: "analyze",
+                            tone: "secondary",
+                            help: "Mapped output should show canonical key type.",
                         },
                         {
                             id: "save",
@@ -416,7 +424,7 @@ export const petTutorial: Tutorial = {
                             kind: "submit",
                             tone: "secondary",
                             expect: "success",
-                            help: "Now the UI payload should map and save successfully.",
+                            help: "Now the payload should map and save successfully.",
                         },
                         {
                             id: "next",
@@ -427,9 +435,9 @@ export const petTutorial: Tutorial = {
                     ],
                     expect: {
                         shouldSee: [
-                            "Schema panel shows v3 with type + alias petType",
-                            "Save succeeds",
-                            "DB snapshot uses canonical key type (not petType)",
+                            "Visual Diff explains canonical type + alias petType",
+                            "Analyze Output mapped keys include type (canonical)",
+                            "Save succeeds; DB snapshot uses type (not petType)",
                         ],
                     },
                 },

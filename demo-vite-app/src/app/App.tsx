@@ -28,11 +28,11 @@ export default function App() {
 
         <main className="mx-auto max-w-7xl px-4 pb-10 pt-6">
           <div className="mb-4">
-            <VisualDiff />
+            <TutorialControls />
           </div>
 
           <div className="mb-4">
-            <TutorialControls />
+            <VisualDiff />
           </div>
 
           <FourPanelLayout
