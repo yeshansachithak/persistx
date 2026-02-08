@@ -313,3 +313,4 @@ id_dsa
 *.heaptimeline
 .heaptimeline
 /demo-vite-app/scripts
+*.sh
