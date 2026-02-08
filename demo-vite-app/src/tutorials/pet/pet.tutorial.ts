@@ -38,7 +38,8 @@ export const petTutorial: Tutorial = {
     description:
         "Learn PersistX with a story: baseline save → add a field (schema mismatch) → rename a field safely using aliases.",
 
-    schemaBaseUrl: "/schemas/pet",
+    // IMPORTANT: works in dev (/) and GitHub Pages (/persistx/)
+    schemaBaseUrl: `${import.meta.env.BASE_URL}schemas/pet`.replace(/\/+$/, ""),
 
     forms: {
         petProfile: {

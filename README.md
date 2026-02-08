@@ -438,5 +438,4 @@ MIT
 
 PersistX makes that real by providing a robust contract layer that protects your data as your applications evolve, ensuring that both new and legacy clients can coexist without breaking your persistence layer.
 
-Yeshan Perera
 ---
