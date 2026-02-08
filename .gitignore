@@ -260,7 +260,7 @@ temp/
 .travis.yml
 .gitlab-ci.yml
 .azure-pipelines/
-.github/
+!.github/
 !.github/workflows/
 !.github/workflows/*.yml
 .gitlab/
