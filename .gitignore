@@ -260,8 +260,9 @@ temp/
 .travis.yml
 .gitlab-ci.yml
 .azure-pipelines/
-.github/workflows/*.yml
-!.github/workflows/example.yml
+.github/
+!.github/workflows/
+!.github/workflows/*.yml
 .gitlab/
 bitbucket-pipelines.yml
 .codesandbox/
