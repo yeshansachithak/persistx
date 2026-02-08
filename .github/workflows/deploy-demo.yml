@@ -3,6 +3,14 @@ name: Deploy Demo to GitHub Pages
 on:
   push:
     branches: [main]
+    paths:
+      - "demo-vite-app/**"
+      - "packages/**"
+      - ".github/workflows/deploy-demo.yml"
+      - "package.json"
+      - "yarn.lock"
+      - ".yarnrc.yml"
+      - ".yarn/**"
   workflow_dispatch:
 
 permissions:
@@ -10,33 +18,38 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Enable Corepack
+        run: corepack enable
 
-      - name: Build packages
-        run: |
-          npm run build --workspace=@persistx/core
-          npm run build --workspace=@persistx/cli
-          npm run build --workspace=@persistx/adapter-firestore
-          npm run build --workspace=@persistx/validator-zod
-          npm run build --workspace=demo-vite-app
+      - name: Install (Yarn)
+        run: yarn install --immutable
 
-      - uses: actions/configure-pages@v4
+      - name: Build (ordered)
+        run: yarn build:order
 
-      - uses: actions/upload-pages-artifact@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: demo-vite-app/dist
+          path: ./demo-vite-app/dist
 
   deploy:
     needs: build
@@ -45,4 +58,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/deploy-pages@v4
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
