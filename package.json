@@ -11,7 +11,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "fresh-start": "git checkout --orphan new-branch && git add -A && git commit -m 'Initial commit'",
+    "start:fresh": "git checkout --orphan new-branch && git add -A && git commit -m 'Initial commit'",
     "build": "yarn workspaces foreach -At run build",
     "build:all": "yarn build:core && yarn build:packages && yarn build:demo",
     "build:core": "yarn workspace @persistx/core build",
@@ -21,8 +21,10 @@
     "test": "yarn workspaces foreach -At run test",
     "lint": "yarn workspaces foreach -At run lint",
     "demo": "yarn workspace demo-vite-app dev",
-    "clean": "yarn workspaces foreach -A run clean",
-    "clean:all": "yarn clean && rm -rf packages/**/node_modules",
+    "clean": "find packages -name 'dist' -type d -exec rm -rf {} + && find packages -name '.tsbuildinfo' -type f -delete && rm -rf demo-vite-app/dist",
+    "clean:all": "yarn clean && rm -rf packages/*/node_modules demo-vite-app/node_modules",
+    "clean:nuclear": "rm -rf node_modules .yarn/cache yarn.lock packages/*/node_modules packages/*/dist packages/*/.tsbuildinfo demo-vite-app/node_modules demo-vite-app/dist",
+    "fresh": "yarn clean:nuclear && yarn install && yarn build:all",
     "release:check": "yarn clean && yarn build && yarn test",
     "release:publish": "yarn npm publish --workspaces"
   },
