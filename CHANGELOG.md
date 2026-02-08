@@ -6,7 +6,12 @@ The format is based on "Keep a Changelog" and adheres to Semantic Versioning.
 
 ## [Unreleased]
 
-- Work in progress: add further release notes here.
+-
+
+## [1.0.0] - 2026-02-08
+
+- GitHub release: v1.0.0 — initial stable release.
+  - Moved items from `Unreleased`.
 
 ## [0.1.0] - 2026-02-08
 

@@ -1,28 +1,28 @@
-// src/ui/layout/Header.tsx
-
 import { useMemo, useState } from "react";
 import { useTutorial } from "../../tutorial/TutorialContext";
-import { Globe, Github, Copy, Share2, RotateCcw } from "lucide-react";
+import {
+    Globe,
+    Github,
+    Copy,
+    Share2,
+    RotateCcw,
+    Package,
+    Info,
+} from "lucide-react";
 
-/**
- * App header for the PersistX Interactive Tutorial.
- *
- * UX rule (teach-first):
- * - Header = Product chrome only (PersistX + tutorial title/description)
- * - Story/step context lives in TutorialControls
- *
- * Tailwind-only UI.
- */
-export default function Header() {
+export default function Header({
+    onOpenAbout,
+}: {
+    onOpenAbout: () => void;
+}) {
     const { state } = useTutorial();
 
-    // If you want this dynamic later, read from package.json at build time.
-    const version = "v0.1.0";
+    // Can later be read from package.json at build time
+    const version = "v1.0.1";
 
-    const [toast, setToast] = useState<string>("");
+    const [toast, setToast] = useState("");
 
     const demoUrl = useMemo(() => {
-        // Works on GH Pages + local dev
         try {
             return window.location.href;
         } catch {
@@ -39,27 +39,23 @@ export default function Header() {
     async function share() {
         if (!demoUrl) return;
 
-        // Use native share if available; fallback to copy.
         const navAny: any = navigator;
         if (navAny?.share) {
             try {
                 await navAny.share({
                     title: "PersistX Demo",
                     text: "PersistX Interactive Tutorial",
-                    url: demoUrl
+                    url: demoUrl,
                 });
                 showToast("Share opened");
                 return;
-            } catch {
-                // user cancelled or failed -> fallback to copy
-            }
+            } catch { }
         }
 
         await copyLink();
     }
 
     function startOver() {
-        // Guaranteed reset without relying on engine internals
         window.location.reload();
     }
 
@@ -73,7 +69,7 @@ export default function Header() {
         <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/85 backdrop-blur">
             <div className="mx-auto max-w-7xl px-4 py-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    {/* Left: Product + tutorial meta */}
+                    {/* Left */}
                     <div className="min-w-0">
                         <div className="flex items-center gap-2">
                             <div className="text-lg font-semibold uppercase tracking-wide text-zinc-500">
@@ -96,60 +92,48 @@ export default function Header() {
                         ) : null}
                     </div>
 
-                    {/* Right: actions + links */}
+                    {/* Right */}
                     <div className="flex items-center gap-2 sm:justify-end">
-                        {/* Primary-ish: Start over */}
-                        <IconButton
-                            title="Start over"
-                            onClick={startOver}
-                            ariaLabel="Start over"
-                        >
+                        <IconButton title="Start over" onClick={startOver} ariaLabel="Start over">
                             <RotateCcw className="h-4 w-4" />
                         </IconButton>
 
-                        {/* Share / Copy */}
-                        <IconButton
-                            title="Share demo"
-                            onClick={share}
-                            ariaLabel="Share demo"
-                        >
+                        <IconButton title="Share demo" onClick={share} ariaLabel="Share demo">
                             <Share2 className="h-4 w-4" />
                         </IconButton>
 
-                        <IconButton
-                            title="Copy link"
-                            onClick={copyLink}
-                            ariaLabel="Copy link"
-                        >
+                        <IconButton title="Copy link" onClick={copyLink} ariaLabel="Copy link">
                             <Copy className="h-4 w-4" />
                         </IconButton>
 
                         <span className="mx-1 hidden h-6 w-px bg-zinc-200 sm:inline-block" />
 
-                        {/* External links */}
+                        <IconButton title="About PersistX" onClick={onOpenAbout} ariaLabel="About">
+                            <Info className="h-4 w-4" />
+                        </IconButton>
+
                         <a
-                            href="https://www.yeshanperera.com/"
+                            href="https://github.com/yeshansachithak/persistx"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
-                            title="Author website"
+                            title="PersistX GitHub"
                         >
-                            <Globe className="h-4 w-4" />
+                            <Github className="h-4 w-4" />
                         </a>
 
                         <a
-                            href="https://github.com/yeshansachithak"
+                            href="https://www.npmjs.com/org/persistx"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
-                            title="GitHub"
+                            title="PersistX npm"
                         >
-                            <Github className="h-4 w-4" />
+                            <Package className="h-4 w-4" />
                         </a>
                     </div>
                 </div>
 
-                {/* Tiny toast */}
                 {toast ? (
                     <div className="mt-3 flex justify-end">
                         <div className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm">
