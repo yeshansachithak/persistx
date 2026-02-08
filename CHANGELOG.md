@@ -8,6 +8,10 @@ The format is based on "Keep a Changelog" and adheres to Semantic Versioning.
 
 -
 
+## [1.0.1] - 2026-02-08
+
+- chore: release v1.0.1 (docs, demo polish, version bump) (commit 0c05970)
+
 ## [1.0.0] - 2026-02-08
 
 - GitHub release: v1.0.0 — initial stable release.
