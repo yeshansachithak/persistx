@@ -314,3 +314,4 @@ id_dsa
 .heaptimeline
 /demo-vite-app/scripts
 *.sh
+project_dump.txt
