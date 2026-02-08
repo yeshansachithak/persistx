@@ -1,6 +1,6 @@
 {
   "name": "@persistx/adapter-firestore",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -24,7 +24,7 @@
     "clean": "rm -rf dist ./.tsbuildinfo"
   },
   "dependencies": {
-    "@persistx/core": "workspace:*",
+    "@persistx/core": "1.0.0",
     "firebase-admin": "^13.6.0"
   },
   "devDependencies": {
