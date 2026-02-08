@@ -28,7 +28,7 @@
     "clean:nuclear": "rm -rf node_modules dist coverage .yarn/cache .yarn/install-state.gz yarn.lock packages/*/node_modules packages/*/dist packages/*/*.tsbuildinfo demo-vite-app/node_modules demo-vite-app/dist",
     "fresh": "yarn clean:nuclear && yarn install && yarn build:all",
     "release:check": "yarn clean && yarn install && yarn build:all && yarn test",
-    "release:publish": "yarn npm publish --access public --tolerate-republish -w @persistx/core && yarn npm publish --access public --tolerate-republish -w @persistx/validator-zod && yarn npm publish --access public --tolerate-republish -w @persistx/adapter-firestore && yarn npm publish --access public --tolerate-republish -w @persistx/cli"
+    "release:publish": "yarn workspace @persistx/core npm publish --access public && yarn workspace @persistx/validator-zod npm publish --access public && yarn workspace @persistx/adapter-firestore npm publish --access public && yarn workspace @persistx/cli npm publish --access public"
   },
   "devDependencies": {
     "@types/node": "^25.0.3"
