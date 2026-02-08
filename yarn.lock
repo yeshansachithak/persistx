@@ -2086,6 +2086,7 @@ __metadata:
     eslint-plugin-react-hooks: "npm:^7.0.1"
     eslint-plugin-react-refresh: "npm:^0.4.24"
     globals: "npm:^16.5.0"
+    lucide-react: "npm:^0.563.0"
     react: "npm:^19.2.0"
     react-dom: "npm:^19.2.0"
     tailwindcss: "npm:^4.1.18"
@@ -3815,7 +3816,6 @@ __metadata:
   resolution: "persistx@workspace:."
   dependencies:
     "@types/node": "npm:^25.0.3"
-    lucide-react: "npm:^0.563.0"
   languageName: unknown
   linkType: soft
 
