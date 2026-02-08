@@ -29,7 +29,7 @@
     "clean": "rm -rf dist ./.tsbuildinfo"
   },
   "dependencies": {
-    "@persistx/core": "workspace:^",
+    "@persistx/core": "^1.0.0",
     "firebase-admin": "^13.6.0"
   },
   "devDependencies": {

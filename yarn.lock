@@ -851,7 +851,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@persistx/adapter-firestore@workspace:packages/adapter-firestore"
   dependencies:
-    "@persistx/core": "workspace:^"
+    "@persistx/core": "npm:^1.0.0"
     firebase-admin: "npm:^13.6.0"
     typescript: "npm:^5.6.0"
   languageName: unknown
@@ -861,7 +861,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@persistx/cli@workspace:packages/cli"
   dependencies:
-    "@persistx/core": "workspace:^"
+    "@persistx/core": "npm:^1.0.0"
     tsx: "npm:^4.19.0"
     typescript: "npm:^5.6.0"
   bin:
@@ -869,7 +869,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@persistx/core@workspace:^, @persistx/core@workspace:packages/core":
+"@persistx/core@npm:^1.0.0, @persistx/core@workspace:^, @persistx/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@persistx/core@workspace:packages/core"
   dependencies:
@@ -881,7 +881,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@persistx/validator-zod@workspace:packages/validator-zod"
   dependencies:
-    "@persistx/core": "workspace:^"
+    "@persistx/core": "npm:^1.0.0"
     typescript: "npm:^5.6.0"
     zod: "npm:^3.23.8"
   languageName: unknown
